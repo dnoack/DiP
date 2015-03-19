@@ -1,2 +1,4 @@
 /core
-/Debug/
+*.d
+*.o
+
