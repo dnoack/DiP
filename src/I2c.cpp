@@ -11,13 +11,30 @@
 
 string* I2c::processMsg(string* msg)
 {
-	Value bla;
-	Value blub;
+	Value result;
+	Value params;
+	Document* dom;
 
-	write(bla, blub);
+	try
+	{
+		dom = json->parse(msg);
+		if(json->isRequest())
+		{
+			state = 0;
+			lastMethod = (*dom)["method"];
+			executeFunction(lastMethod, params, result);
+		}
+
+
+	}
+	catch(PluginError &e)
+	{
+		if(lastMethod != NULL)
+			executeFunction(lastMethod, params, result);
+	}
+
 
 	return response;
-
 }
 
 
@@ -52,6 +69,7 @@ bool I2c::write(Value &params, Value &result)
 		case 5:
 			response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}");
 			state = 6;
+			lastMethod = NULL;
 			break;
 		default:
 			printf("Fehler in I2C::write, wrong state.\n");

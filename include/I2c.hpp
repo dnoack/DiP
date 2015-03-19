@@ -46,6 +46,7 @@ class I2c : public DriverInterface<I2c*, afptr>
 		int state;
 		JsonRPC* json;
 		string* response;
+		Value lastMethod;
 };
 
 #endif /* I2C_H_ */
