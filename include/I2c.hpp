@@ -54,6 +54,9 @@ class I2c : public DriverInterface<I2c*, afptr>
 		static list<string*>* funcList;
 
 		bool write(Value &params, Value &result);
+
+		Value* aa_open();
+		Value* aa_write();
 };
 
 #endif /* I2C_H_ */
