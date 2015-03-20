@@ -32,6 +32,7 @@ class I2c : public DriverInterface<I2c*, afptr>
 			temp = &I2c::write;
 			funcMap.insert(pair<const char*, afptr>("i2c.write", temp));
 
+			funcList = getAllFunctionNames();
 		}
 
 		~I2c()
@@ -41,12 +42,18 @@ class I2c : public DriverInterface<I2c*, afptr>
 
 		string* processMsg(string* msg);
 
+		static list<string*>* getFuncList(){return funcList;}
+
 	private:
-		bool write(Value &params, Value &result);
+
 		int state;
 		JsonRPC* json;
 		string* response;
 		Value lastMethod;
+
+		static list<string*>* funcList;
+
+		bool write(Value &params, Value &result);
 };
 
 #endif /* I2C_H_ */

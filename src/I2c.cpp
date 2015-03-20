@@ -8,6 +8,8 @@
 #include <I2c.hpp>
 #include "unistd.h"
 
+list<string*>* I2c::funcList;
+
 
 string* I2c::processMsg(string* msg)
 {
