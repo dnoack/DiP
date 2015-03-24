@@ -27,13 +27,17 @@ string* I2c::processMsg(string* msg)
 			lastMethod = (*dom)["method"];
 			executeFunction(lastMethod, params, result);
 		}
+		else
+		{
+			if(lastMethod != NULL)
+				executeFunction(lastMethod, params, result);
+		}
 
 
 	}
 	catch(PluginError &e)
 	{
-		if(lastMethod != NULL)
-			executeFunction(lastMethod, params, result);
+		throw;
 	}
 
 
