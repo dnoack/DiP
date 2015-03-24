@@ -29,11 +29,12 @@ string* I2c::processMsg(string* msg)
 			lastMethod = (*dom)["method"];
 			executeFunction(lastMethod, params, result);
 		}
+		/*
 		else
 		{
 			if(lastMethod != NULL)
 				executeFunction(lastMethod, params, result);
-		}
+		}*/
 
 
 	}
@@ -53,27 +54,32 @@ bool I2c::write(Value &params, Value &result)
 	{
 		aa_open();
 		udsWorker->uds_send(subRequest);
+		delete subRequest;
 		subResponse = waitForResponse();
 		//do something with subResponse
 
 
 		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": {\"handle\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}");
 		udsWorker->uds_send(subRequest);
+		delete subRequest;
 		subResponse = waitForResponse();
 
 
 		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 , \"slave_addr\": 56, \"flags\": 0, \"num_bytes\": 2, \"data_out\": [3,0]}, \"method\": \"Aardvark.aa_i2c_write\", \"id\": 4}");
 		udsWorker->uds_send(subRequest);
+		delete subRequest;
 		subResponse = waitForResponse();
 
 
 		aa_write();
 		udsWorker->uds_send(subRequest);
+		delete subRequest;
 		subResponse = waitForResponse();
 
 
 		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 7}");
 		udsWorker->uds_send(subRequest);
+		delete subRequest;
 		subResponse = waitForResponse();
 
 		response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}");
@@ -126,8 +132,6 @@ Value* I2c::aa_write()
 	Value array;
 	Document dom;
 	char* localRequest = NULL;
-
-	//data = json->tryTogetParam("data_out");
 
 
 	method.SetString("Aardvark.aa_i2c_write", dom.GetAllocator());
