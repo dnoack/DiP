@@ -16,6 +16,7 @@
 using namespace rapidjson;
 
 class I2c;
+class UdsComWorker;
 
 typedef bool (I2c::*afptr)(Value&, Value&);
 
@@ -23,11 +24,20 @@ typedef bool (I2c::*afptr)(Value&, Value&);
 class I2c : public DriverInterface<I2c*, afptr>
 {
 	public:
-		I2c() :DriverInterface<I2c*, afptr>(this)
+
+
+		I2c(UdsComWorker* udsWorker) :DriverInterface<I2c*, afptr>(this)
 		{
 			afptr temp;
 			this->state = 0;
 			this->response = NULL;
+			this-> udsWorker = udsWorker;
+
+			sigemptyset(&set);
+			sigaddset(&set, SIGUSR2);
+			timeout.tv_sec = 5;
+			timeout.tv_nsec = 0;
+
 			json = new JsonRPC();
 			temp = &I2c::write;
 			funcMap.insert(pair<const char*, afptr>("i2c.write", temp));
@@ -49,7 +59,14 @@ class I2c : public DriverInterface<I2c*, afptr>
 		int state;
 		JsonRPC* json;
 		string* response;
+		string* subResponse;
+		string* subRequest;
+		string* request;
 		Value lastMethod;
+		UdsComWorker* udsWorker;
+
+		sigset_t set;
+		struct timespec timeout;
 
 		static list<string*>* funcList;
 
@@ -57,6 +74,8 @@ class I2c : public DriverInterface<I2c*, afptr>
 
 		Value* aa_open();
 		Value* aa_write();
+
+		string* waitForResponse();
 };
 
 #endif /* I2C_H_ */

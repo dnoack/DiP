@@ -6,8 +6,10 @@
  *  Author: 		dnoack
  */
 
+#include "UdsComWorker.hpp"
 #include <I2c.hpp>
 #include "unistd.h"
+#include "signal.h"
 
 list<string*>* I2c::funcList;
 
@@ -47,44 +49,47 @@ string* I2c::processMsg(string* msg)
 
 bool I2c::write(Value &params, Value &result)
 {
-	//TODO: implement the hardcoded $&%/
-	switch(state)
+	try
 	{
-		case 0:
-			aa_open();
-			state = 1;
-			break;
-		case 1:
-			response = new string("{\"jsonrpc\": \"2.0\", \"params\": {\"handle\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}");
-			state = 2;
-			//power
-			break;
-		case 2:
-			response = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 , \"slave_addr\": 56, \"flags\": 0, \"num_bytes\": 2, \"data_out\": [3,0]}, \"method\": \"Aardvark.aa_i2c_write\", \"id\": 4}");
-			state = 3;
-			//write
-			break;
-		case 3:
-			aa_write();
-			state = 4;
-			break;
-		case 4:
-			response = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 7}");
-			state = 5;
-			//close
-			break;
-		case 5:
-			response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}");
-			state = 6;
-			lastMethod = NULL;
-			break;
-		default:
-			printf("Fehler in I2C::write, wrong state.\n");
-			break;
+		aa_open();
+		udsWorker->uds_send(subRequest);
+		subResponse = waitForResponse();
+		//do something with subResponse
+
+
+		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": {\"handle\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}");
+		udsWorker->uds_send(subRequest);
+		subResponse = waitForResponse();
+
+
+		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 , \"slave_addr\": 56, \"flags\": 0, \"num_bytes\": 2, \"data_out\": [3,0]}, \"method\": \"Aardvark.aa_i2c_write\", \"id\": 4}");
+		udsWorker->uds_send(subRequest);
+		subResponse = waitForResponse();
+
+
+		aa_write();
+		udsWorker->uds_send(subRequest);
+		subResponse = waitForResponse();
+
+
+		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 7}");
+		udsWorker->uds_send(subRequest);
+		subResponse = waitForResponse();
+
+		response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}");
 	}
+	catch(PluginError &e)
+	{
+		response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"NOT OK\", \"id\": 7}");
+
+	}
+
+
+
 
 	return true;
 }
+
 
 Value* I2c::aa_open()
 {
@@ -106,10 +111,11 @@ Value* I2c::aa_open()
 	localRequest = json->generateRequest(method, localParams, id);
 
 	//send through tunnel server
-	response = new string(localRequest);
+	subRequest = new string(localRequest);
 
 	return device;
 }
+
 
 Value* I2c::aa_write()
 {
@@ -141,8 +147,21 @@ Value* I2c::aa_write()
 	localRequest = json->generateRequest(method, localParams, id);
 
 	//send through tunnel server
-	response = new string(localRequest);
+	subRequest = new string(localRequest);
 
 	return data;
 
+}
+
+
+string* I2c::waitForResponse()
+{
+	int retCode = 0;
+	retCode = sigtimedwait(&set, NULL, &timeout);
+	if(retCode < 0)
+		throw PluginError("Timeout waiting for subResponse.\n");
+
+	subResponse = udsWorker->getNextMsg();
+	printf("SubResponse: %s\n", subResponse->c_str());
+	return subResponse;
 }

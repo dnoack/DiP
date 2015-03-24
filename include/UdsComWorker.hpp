@@ -39,9 +39,19 @@ class UdsComWorker : public WorkerInterface, public WorkerThreads{
 		UdsComWorker(int socket);
 		~UdsComWorker();
 
+		int uds_send(string* data);
+
+		//should only be called within thread_Work thread !
+		string* getNextMsg()
+		{
+			string* retValue = receiveQueue.back();
+			popReceiveQueueWithoutDelete();
+			return retValue;
+		}
 
 	private:
 
+		bool requestInProgress;
 
 		//variables for listener
 		bool listen_thread_active;

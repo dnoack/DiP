@@ -1,8 +1,8 @@
 /*
  * WorkerInterface.hpp
  *
- *  Created on: 25.02.2015
- *      Author: Dave
+ *  Created on: 	25.02.2015
+ *  Author: 		dnoack
  */
 
 #ifndef WORKERINTERFACE_HPP_
@@ -25,9 +25,9 @@ class WorkerInterface{
 			pthread_mutex_init(&rQmutex, NULL);
 
 			this->currentSig = 0;
+			this->ready = false;
 			this->listenerDown = false;
 			this->deletable = false;
-			this->ready = false;
 
 		};
 
@@ -38,7 +38,6 @@ class WorkerInterface{
 		};
 
 		bool isDeletable(){return deletable;}
-		bool isReady(){return ready;}
 
 
 	protected:
@@ -64,7 +63,7 @@ class WorkerInterface{
 
 		void popReceiveQueue()
 		{
-			string* lastElement = NULL;
+			string* lastElement;
 			pthread_mutex_lock(&rQmutex);
 				lastElement = receiveQueue.back();
 				receiveQueue.pop_back();
@@ -73,10 +72,20 @@ class WorkerInterface{
 		}
 
 
+
+		void popReceiveQueueWithoutDelete()
+		{
+			pthread_mutex_lock(&rQmutex);
+
+				receiveQueue.pop_back();
+			pthread_mutex_unlock(&rQmutex);
+		}
+
+
 		void pushReceiveQueue(string* data)
 		{
 			pthread_mutex_lock(&rQmutex);
-				receiveQueue.push_front(data);
+				receiveQueue.push_back(data); //was push front 18.03.2015
 			pthread_mutex_unlock(&rQmutex);
 		}
 
@@ -90,8 +99,6 @@ class WorkerInterface{
 
 			return result;
 		}
-
-
 
 
 		void configSignals()

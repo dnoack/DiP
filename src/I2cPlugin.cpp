@@ -23,7 +23,7 @@ I2cPlugin::I2cPlugin()
 	pluginActive = true;
 
 	//get List of key, which are supported by the driver
-	I2c* tempDriver = new I2c();
+	I2c* tempDriver = new I2c(NULL);
 	funcList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 

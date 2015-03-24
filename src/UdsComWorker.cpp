@@ -25,8 +25,9 @@ UdsComWorker::UdsComWorker(int socket)
 	this->lthread = 0;
 	this->request = 0;
 	this->response = 0;
+	this->requestInProgress = false;
 	this->currentSocket = socket;
-	this->i2c = new I2c();
+	this->i2c = new I2c(this);
 
 	StartWorkerThread(currentSocket);
 }
@@ -45,6 +46,12 @@ UdsComWorker::~UdsComWorker()
 	WaitForListenerThreadToExit();
 	WaitForWorkerThreadToExit();
 
+}
+
+
+int UdsComWorker::uds_send(string* data)
+{
+	return send(currentSocket, data->c_str(), data->size(), 0);
 }
 
 
@@ -71,7 +78,7 @@ void UdsComWorker::thread_work(int socket)
 			case SIGUSR1:
 				while(getReceiveQueueSize() > 0)
 				{
-
+					requestInProgress = true;
 					request = receiveQueue.back();
 					printf("Received: %s\n", request->c_str());
 					try
@@ -91,6 +98,7 @@ void UdsComWorker::thread_work(int socket)
 
 					popReceiveQueue();
 					delete response;
+					requestInProgress = false;
 				}
 				break;
 
@@ -138,9 +146,20 @@ void UdsComWorker::thread_listen(pthread_t parent_th, int socket, char* workerBu
 
 			if(recvSize > 0)
 			{
-				//add received data in buffer to queue
-				pushReceiveQueue(new string(receiveBuffer, recvSize));
-				pthread_kill(parent_th, SIGUSR1);
+				if(!requestInProgress)
+				{
+					//add received data in buffer to queue
+					pushReceiveQueue(new string(receiveBuffer, recvSize));
+					pthread_kill(parent_th, SIGUSR1);
+				}
+				else
+				{
+					pushReceiveQueue(new string(receiveBuffer, recvSize));
+					pthread_kill(parent_th, SIGUSR2);
+					//create worker busy flag, if worker is NOT busy send SIGUSR1 else send SIGUSR2
+					//sigusr1 will be for completely new request, sigusr2 will be for requests which are part of
+					// a bigger request
+				}
 			}
 			//RSD invoked shutdown
 			else
