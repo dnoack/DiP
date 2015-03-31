@@ -94,9 +94,9 @@ void UdsComWorker::thread_work(int socket)
 						printf("Unkown exception.\n");
 					}
 
+					popReceiveQueue();
 					send(currentSocket, response->c_str(), response->size(), 0);
 
-					popReceiveQueue();
 					delete response;
 					requestInProgress = false;
 				}

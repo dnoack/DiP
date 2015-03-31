@@ -22,7 +22,7 @@ Document* JsonRPC::parse(string* msg)
 			result = inputDOM;
 		else
 		{
-
+			nullId.SetInt(0);
 			error = generateResponseError(nullId, -32700, "Error while parsing json rpc.");
 			result = NULL;
 			throw PluginError(error);
@@ -476,7 +476,6 @@ char* JsonRPC::generateResponse(Value &id, Value &response)
 
 	//write DOM to sBuffer
 	responseDOM->Accept(*jsonWriter);
-	//printf("\nResponseMsg: %s\n", sBuffer.GetString());
 
 	return (char*)sBuffer.GetString();
 }
@@ -502,7 +501,6 @@ char* JsonRPC::generateResponseError(Value &id, int code, const char* msg)
 	(*errorDOM)["error"]["data"].Swap(data);
 
 	errorDOM->Accept(*jsonWriter);
-	//printf("\nErrorMsg: %s\n", sBuffer.GetString());
 
 	return (char*)sBuffer.GetString();
 }
