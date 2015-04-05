@@ -38,6 +38,7 @@ class I2c : public DriverInterface<I2c*, afptr>
 			timeout.tv_sec = 5;
 			timeout.tv_nsec = 0;
 
+			msgList = NULL;
 			json = new JsonRPC();
 			temp = &I2c::write;
 			funcMap.insert(pair<const char*, afptr>("i2c.write", temp));
@@ -64,6 +65,7 @@ class I2c : public DriverInterface<I2c*, afptr>
 		string* request;
 		Value lastMethod;
 		UdsComWorker* udsWorker;
+		list<string*>* msgList;
 
 		sigset_t set;
 		struct timespec timeout;
