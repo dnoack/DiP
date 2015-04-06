@@ -19,26 +19,19 @@ string* I2c::processMsg(string* msg)
 	Value result;
 	Value params;
 	Document* dom;
-	int testSize = 0;
 	list<string*>::iterator currentMsg;
 
 	try
 	{
 
 		msgList = json->splitMsg(msg);
-		delete msg;
-
-		testSize = msgList->size();
 		currentMsg = msgList->begin();
-
-		printf("testmsg : %s \n", (*currentMsg)->c_str());
 
 		while(currentMsg != msgList->end())
 		{
 			dom = json->parse(*currentMsg);
 			if(json->isRequest())
 			{
-				state = 0;
 				lastMethod = (*dom)["method"];
 				executeFunction(lastMethod, params, result);
 				delete *currentMsg;
@@ -50,6 +43,7 @@ string* I2c::processMsg(string* msg)
 				currentMsg = msgList->erase(currentMsg);
 			}
 		}
+		delete msgList;
 
 
 	}
