@@ -25,7 +25,7 @@
 #include "WorkerThreads.hpp"
 
 
-class UdsRegWorker : public WorkerInterface, public WorkerThreads{
+class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 
 	public:
 		UdsRegWorker(int socket);

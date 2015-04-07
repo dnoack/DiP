@@ -8,8 +8,6 @@
 #ifndef INCLUDE_UDSCOMWORKER_HPP_
 #define INCLUDE_UDSCOMWORKER_HPP_
 
-#define BUFFER_SIZE 1024
-
 
 //unix domain socket definition
 #include <sys/un.h>
@@ -30,7 +28,7 @@
 class UdsServer;
 
 
-class UdsComWorker : public WorkerInterface, public WorkerThreads{
+class UdsComWorker : public WorkerInterface<string>, public WorkerThreads{
 
 	public:
 
@@ -55,20 +53,8 @@ class UdsComWorker : public WorkerInterface, public WorkerThreads{
 
 
 		bool requestInProgress;
-
-		//variables for listener
-		bool listen_thread_active;
-		char receiveBuffer[BUFFER_SIZE];
-		int recvSize;
-
-		//variables for worker
-		bool worker_thread_active;
 		string* request;
 		string* response;
-
-
-		//not shared, more common
-		pthread_t lthread;
 		int currentSocket;
 		I2c* i2c;
 
