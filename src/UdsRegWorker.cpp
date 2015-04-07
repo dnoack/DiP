@@ -18,11 +18,6 @@
 
 UdsRegWorker::UdsRegWorker(int socket)
 {
-	memset(receiveBuffer, '\0', BUFFER_SIZE);
-
-	this->listen_thread_active = false;
-	this->worker_thread_active = false;
-	this->recvSize = 0;
 	this->currentMsgId = NULL;
 	this->error = NULL;
 	this->currentSocket = socket;
@@ -36,8 +31,6 @@ UdsRegWorker::UdsRegWorker(int socket)
 
 UdsRegWorker::~UdsRegWorker()
 {
-	worker_thread_active = false;
-	listen_thread_active = false;
 
 	pthread_cancel(getListener());
 	pthread_cancel(getWorker());
