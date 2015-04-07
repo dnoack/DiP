@@ -40,6 +40,8 @@ UdsComWorker::~UdsComWorker()
 	WaitForListenerThreadToExit();
 	WaitForWorkerThreadToExit();
 
+	deleteReceiveQueue();
+
 }
 
 
