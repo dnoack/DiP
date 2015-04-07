@@ -33,7 +33,6 @@ class UdsRegClient{
 		UdsRegClient(const char* pluginName, int pluginNumber,const char* regPath, int size, const char* comPath);
 		~UdsRegClient();
 
-
 		bool connectToRSD();
 		void unregisterFromRSD();
 
@@ -41,29 +40,20 @@ class UdsRegClient{
 
 	private:
 
-	UdsRegWorker* regWorker;
-	JsonRPC* json;
-	//client is ready if listener is recving
-	bool ready;
-	int optionflag;
-	int currentSocket;
+		static struct sockaddr_un address;
+		static socklen_t addrlen;
 
-	const char* pluginName;
-	int pluginNumber;
-	const char* pluginPath;
+		UdsRegWorker* regWorker;
+		JsonRPC* json;
+		bool ready;
+		int optionflag;
+		int currentSocket;
+		const char* pluginName;
+		int pluginNumber;
+		const char* pluginPath;
 
-
-
-	static struct sockaddr_un address;
-	static socklen_t addrlen;
-
-
-
-
-	int sendData(string* data);
+		int sendData(string* data);
 };
-
-
 
 
 #endif /* INCLUDE_UDSREGCLIENT_HPP_ */

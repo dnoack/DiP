@@ -42,23 +42,19 @@ class WorkerInterface{
 
 	protected:
 
+		static void dummy_handler(int){};
+
 		//receivequeue
 		list<string*> receiveQueue;
 		pthread_mutex_t rQmutex;
-
-
 		//signal variables
 		struct sigaction action;
 		sigset_t sigmask;
 		sigset_t origmask;
 		int currentSig;
-
 		bool listenerDown;
 		bool deletable;
 		bool ready;
-
-		static void dummy_handler(int){};
-
 
 
 		void popReceiveQueue()
@@ -70,7 +66,6 @@ class WorkerInterface{
 				delete lastElement;
 			pthread_mutex_unlock(&rQmutex);
 		}
-
 
 
 		void popReceiveQueueWithoutDelete()
@@ -118,10 +113,7 @@ class WorkerInterface{
 			pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
 		}
 
-
-
 };
-
 
 
 #endif /* WORKERINTERFACE_HPP_ */

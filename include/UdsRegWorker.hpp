@@ -9,6 +9,8 @@
 #ifndef UDSREGWORKER_HPP_
 #define UDSREGWORKER_HPP_
 
+#define BUFFER_SIZE 1024
+
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -22,7 +24,6 @@
 #include "WorkerInterface.hpp"
 #include "WorkerThreads.hpp"
 
-#define BUFFER_SIZE 1024
 
 class UdsRegWorker : public WorkerInterface, public WorkerThreads{
 
@@ -33,11 +34,14 @@ class UdsRegWorker : public WorkerInterface, public WorkerThreads{
 		bool isReady(){return ready;}
 
 	private:
+
+		virtual void thread_listen(pthread_t partent_th, int socket, char* workerBuffer);
+		virtual void thread_work(int socket);
+
+
 		JsonRPC* json;
 		const char* error;
 		Value* currentMsgId;
-
-
 		bool worker_thread_active;
 		bool listen_thread_active;
 		char receiveBuffer[BUFFER_SIZE];
@@ -45,6 +49,7 @@ class UdsRegWorker : public WorkerInterface, public WorkerThreads{
 		int currentSocket;
 		enum REG_STATE{NOT_ACTIVE, ANNOUNCED, REGISTERED, ACTIVE, BROKEN};
 		unsigned int state;
+
 
 		int uds_send(char* msg);
 		void processRegistration();
@@ -55,8 +60,6 @@ class UdsRegWorker : public WorkerInterface, public WorkerThreads{
 		const char* createPluginActiveMsg();
 
 
-		virtual void thread_listen(pthread_t partent_th, int socket, char* workerBuffer);
-		virtual void thread_work(int socket);
 };
 
 #endif /* UDSREGWORKER_HPP_ */

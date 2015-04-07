@@ -25,7 +25,6 @@
 class UdsComWorker;
 
 
-
 class UdsServer{
 
 	public:
@@ -47,24 +46,21 @@ class UdsServer{
 		void checkForDeletableWorker();
 
 	private:
-		int optionflag;
+
 		static bool ready;
-
 		static int connection_socket;
-
 		//list of pthread ids with all the active worker. push and pop must be protected by mutex
 		static list<UdsComWorker*> workerList;
 		static pthread_mutex_t wLmutex;
-
 		static struct sockaddr_un address;
 		static socklen_t addrlen;
-
 
 		static void* uds_accept(void*);
 
 
-};
+		int optionflag;
 
+};
 
 
 #endif /* INCLUDE_UDSSERVER_HPP_ */

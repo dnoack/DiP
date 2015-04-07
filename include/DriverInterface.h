@@ -12,8 +12,10 @@
 #include <map>
 #include <list>
 #include <cstring>
+
 #include "document.h"
 #include "writer.h"
+
 #include "Plugin_Error.h"
 
 using namespace std;
@@ -25,6 +27,7 @@ template <class TDriver, class TPointer>
 class DriverInterface{
 
 	public:
+
 		DriverInterface(TDriver derivedClass)
 		{
 			driver = derivedClass;
@@ -106,7 +109,6 @@ class DriverInterface{
 
 
 };
-
 
 
 #endif /* PLUGIN_ORIGIN_INCLUDE_PLUGIN_INTERFACE_H_ */
