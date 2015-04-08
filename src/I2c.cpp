@@ -43,14 +43,14 @@ string* I2c::processMsg(string* msg)
 				currentMsg = msgList->erase(currentMsg);
 			}
 		}
-		delete msgList;
-
-
 	}
 	catch(PluginError &e)
 	{
-		throw;
+		udsWorker->uds_send(e.get());
+		delete *currentMsg;
+		currentMsg = msgList->erase(currentMsg);
 	}
+	delete msgList;
 
 
 	return response;
@@ -86,7 +86,7 @@ bool I2c::write(Value &params, Value &result)
 		subResponse = waitForResponse();
 
 
-		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 7}");
+		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 6}");
 		udsWorker->uds_send(subRequest);
 		delete subRequest;
 		subResponse = waitForResponse();
@@ -98,9 +98,6 @@ bool I2c::write(Value &params, Value &result)
 		response = new string("{\"jsonrpc\": \"2.0\", \"result\": \"NOT OK\", \"id\": 7}");
 
 	}
-
-
-
 
 	return true;
 }
@@ -155,7 +152,7 @@ Value* I2c::aa_write()
 	localParams.AddMember("slave_addr", 56, dom.GetAllocator());
 	localParams.AddMember("num_bytes", 2, dom.GetAllocator());
 	localParams.AddMember("flags", 0, dom.GetAllocator());
-	id.SetInt(4);
+	id.SetInt(5);
 
 	localRequest = json->generateRequest(method, localParams, id);
 

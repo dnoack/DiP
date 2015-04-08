@@ -47,7 +47,14 @@ UdsComWorker::~UdsComWorker()
 
 int UdsComWorker::uds_send(string* data)
 {
+	//printf("Sending: %s\n", data->c_str());
 	return send(currentSocket, data->c_str(), data->size(), 0);
+}
+
+
+int UdsComWorker::uds_send(const char* data)
+{
+	return send(currentSocket, data, strlen(data), 0);
 }
 
 
