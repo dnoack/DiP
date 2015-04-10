@@ -14,6 +14,7 @@
 
 #include "DriverInterface.h"
 #include "JsonRPC.hpp"
+#include "I2cDevice.hpp"
 
 
 using namespace rapidjson;
@@ -46,6 +47,9 @@ class I2c : public DriverInterface<I2c*, afptr>
 			temp = &I2c::write;
 			funcMap.insert(pair<const char*, afptr>("i2c.write", temp));
 
+			temp= &I2c::getI2cDevices;
+			funcMap.insert(pair<const char*, afptr>("i2c.getI2cDevices", temp));
+
 			funcList = getAllFunctionNames();
 		}
 
@@ -63,6 +67,7 @@ class I2c : public DriverInterface<I2c*, afptr>
 	private:
 
 		static list<string*>* funcList;
+		static list<I2cDevice*> deviceList;
 
 		JsonRPC* json;
 		string* response;
@@ -74,6 +79,8 @@ class I2c : public DriverInterface<I2c*, afptr>
 		sigset_t set;
 		struct timespec timeout;
 
+		bool getI2cDevices(Value &params, Value &result);
+		void getAardvarkDevices();
 
 		bool write(Value &params, Value &result);
 		Value* aa_open();

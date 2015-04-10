@@ -57,6 +57,31 @@ string* I2c::processMsg(string* msg)
 }
 
 
+
+bool I2c::getI2cDevices(Value &params, Value &result)
+{
+	//call getAardvarkDevices
+
+	//.. call further methods for getting other devices
+
+	//generate jsonrpc rsponse like {..... "result" : {Aardvark : [id1, id2, idx] , OtherDevice : [id1, id2, idx]}}
+
+
+}
+
+
+
+void I2c::getAardvarkDevices()
+{
+	//generate json rpc for aa_find_devices ext
+	//make a I2cDevice object for each device found
+	  //push each object to deviceList
+
+
+}
+
+
+
 bool I2c::write(Value &params, Value &result)
 {
 	try
