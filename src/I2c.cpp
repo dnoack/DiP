@@ -68,7 +68,7 @@ bool I2c::write(Value &params, Value &result)
 		//do something with subResponse
 
 
-		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": {\"handle\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}");
+		subRequest = new string("{\"jsonrpc\": \"2.0\", \"params\": {\"Aardvark\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}");
 		udsWorker->uds_send(subRequest);
 		delete subRequest;
 		subResponse = waitForResponse();
