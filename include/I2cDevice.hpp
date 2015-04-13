@@ -11,28 +11,29 @@
 
 class I2cDevice{
 
-	I2cDevice(const char* name, int identification, int port)
-	{
-		this->name = name;
-		this->identification = identification;
-		this->port = port;
-	};
+	public:
+		I2cDevice(const char* name, int port, unsigned int identification)
+		{
+			this->name = name;
+			this->identification = identification;
+			this->port = port;
+		};
 
 
-	virtual ~I2cDevice()
-	{
-		delete name;
-	};
+		virtual ~I2cDevice()
+		{
+			delete name;
+		};
 
 
-	const char* getName(){return this->name;}
-	int getIdentification(){return this->identification;}
-	int getPort(){return this->port;}
+		const char* getName(){return this->name;}
+		unsigned int getIdentification(){return this->identification;}
+		int getPort(){return this->port;}
 
 
 	private:
 		const char* name;
-		int identification;
+		unsigned int identification;
 		int port;
 
 };

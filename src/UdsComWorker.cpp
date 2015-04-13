@@ -84,35 +84,19 @@ void UdsComWorker::thread_work(int socket)
 					requestInProgress = true;
 					request = receiveQueue.back();
 					printf("Received: %s\n", request->c_str());
-					try
-					{
-						response = i2c->processMsg(request);
-					}
-					catch(PluginError &e)
-					{
-						response = new string(e.get());
-					}
-					catch(...)
-					{
-						printf("Unkown exception.\n");
-					}
+
+					i2c->processMsg(request);
 
 					popReceiveQueue();
-					send(currentSocket, response->c_str(), response->size(), 0);
-
-					delete response;
 					requestInProgress = false;
 				}
 				break;
 
-			case SIGUSR2:
-				printf("UdsComWorker: SIGUSR2\n");
-				break;
+
 			default:
 				printf("UdsComWorker: unkown signal \n");
 				break;
 		}
-
 	}
 	close(currentSocket);
 }
@@ -157,7 +141,7 @@ void UdsComWorker::thread_listen(pthread_t parent_th, int socket, char* workerBu
 				}
 				else
 				{
-					pushReceiveQueue(new string(receiveBuffer, recvSize));
+					push_backReceiveQueue(new string(receiveBuffer, recvSize));
 					pthread_kill(parent_th, SIGUSR2);
 					//create worker busy flag, if worker is NOT busy send SIGUSR1 else send SIGUSR2
 					//sigusr1 will be for completely new request, sigusr2 will be for requests which are part of

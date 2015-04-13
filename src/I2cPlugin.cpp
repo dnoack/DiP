@@ -32,6 +32,7 @@ I2cPlugin::~I2cPlugin()
 {
 	delete comServer;
 	delete regClient;
+	I2c::deleteFuncList();
 }
 
 
