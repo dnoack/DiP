@@ -6,12 +6,15 @@
  *  Author: 		dnoack
  */
 
-#include "UdsComWorker.hpp"
-#include <I2c.hpp>
 #include "unistd.h"
 #include "signal.h"
+
+
+#include "UdsComWorker.hpp"
+#include <I2c.hpp>
 #include "I2cDevice.hpp"
 #include "RemoteAardvark.hpp"
+
 
 list<string*>* I2c::funcList;
 list<I2cDevice*> I2c::deviceList;
@@ -42,7 +45,7 @@ void I2c::deleteMsgList()
 void I2c::processMsg(string* msg)
 {
 	Value result;
-	Value params;
+	Value* params;
 	list<string*>::iterator currentMsg;
 
 	try
@@ -56,8 +59,10 @@ void I2c::processMsg(string* msg)
 			if(json->isRequest())
 			{
 				requestMethod = json->tryTogetMethod();
+				params = json->tryTogetParams();
 				requestId = json->getId();
-				executeFunction(*requestMethod, params, result);
+				subRequestId = requestId->GetInt();
+				executeFunction(*requestMethod, *params, result);
 				udsWorker->uds_send(response);
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
@@ -157,27 +162,14 @@ bool I2c::write(Value &params, Value &result)
 	try
 	{
 		aa_open(params);
-		udsWorker->uds_send(subRequest);
-		subResponse = waitForResponse();
-		//TODO: check responsecode
 
-		//aa_target_power(params);
-		subRequest = "{\"jsonrpc\": \"2.0\", \"params\": {\"Aardvark\": 1 , \"powerMask\" :  3 }, \"method\": \"Aardvark.aa_target_power\", \"id\": 3}";
-		udsWorker->uds_send(subRequest);
-		subResponse = waitForResponse();
-		//check responsecode
+		//Add param powerMask for powerUp
+		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, dom.GetAllocator());
+		aa_target_power(params);
 
 
-		subRequest ="{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 , \"slave_addr\": 56, \"flags\": 0, \"num_bytes\": 2, \"data_out\": [3,0]}, \"method\": \"Aardvark.aa_i2c_write\", \"id\": 4}";
-		udsWorker->uds_send(subRequest);
-		subResponse = waitForResponse();
-		//check responsecode
+		aa_write(params);
 
-
-		aa_write();
-		udsWorker->uds_send(subRequest);
-		subResponse = waitForResponse();
-		//check responsecode
 
 
 		subRequest = "{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 6}";
@@ -191,7 +183,8 @@ bool I2c::write(Value &params, Value &result)
 	}
 	catch(PluginError &e)
 	{
-		response = "{\"jsonrpc\": \"2.0\", \"result\": \"NOT OK\", \"id\": 7}";
+		printf("%s\n", e.get());
+		throw;
 
 	}
 
@@ -199,15 +192,18 @@ bool I2c::write(Value &params, Value &result)
 }
 
 
-Value* I2c::aa_open(Value &params)
+void I2c::aa_open(Value &params)
 {
 	Value method;
 	Value localParams;
 	Value id;
+	Value* subResultValue= NULL;
 
 	Value* deviceValue = NULL;
 	int device = -1;
 	Value tempParam;
+	Document* localDom = new Document();
+
 
 
 	//Get exact method name
@@ -216,77 +212,159 @@ Value* I2c::aa_open(Value &params)
 	localParams.SetObject();
 	tempParam.SetString(_aa_open.paramArray[0]._name , dom.GetAllocator());
 	//map "device" -> to "Aardvark"(_aa_open.paramArray[0]._name)
-	deviceValue = json->tryTogetParam("device");
+	deviceValue = findObjectMember(params, "device");
 	device = getPortByUniqueId(deviceValue->GetUint());
 
 	localParams.AddMember(tempParam, device, dom.GetAllocator());
 	//id of this request is the one of the incomming request +1
-	id.SetInt(requestId->GetInt()+1);
+	id.SetInt(++subRequestId);
 
 	subRequest = json->generateRequest(method, localParams, id);
 
-	return deviceValue;
+	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
+	udsWorker->uds_send(subRequest);
+	subResponse = waitForResponse();
+	json->parse(subResponse, localDom);
+
+	subResult = json->tryTogetResult(localDom);
+
+	subResultValue = findObjectMember(*subResult, "Aardvark", kNumberType);
+
+
+	if(subResultValue->GetInt() < 0)
+	{
+		delete localDom;
+		throw PluginError("Could not open Aardvark.");
+	}
+	else
+	{
+		params.AddMember("Aardvark", subResultValue->GetInt(), dom.GetAllocator());
+		delete localDom;
+	}
+
 }
 
 
-Value* I2c::aa_target_power(Value &params)
+void I2c::aa_target_power(Value &params)
 {
 	Value method;
 	Value localParams;
 	Value tempParam;
 	Value id;
+	Value* subResultValue= NULL;
+	Document* localDom = new Document();
 
 	localParams.SetObject();
+	Value* valuePtr = findObjectMember(params, _aa_target_power.paramArray[0]._name);
+
+	//Aardvark handle
 	tempParam.SetString(_aa_target_power.paramArray[0]._name, dom.GetAllocator());
-	//get aardvark handle !
+	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
 
-	localParams.AddMember(tempParam, tempParam, dom.GetAllocator());
-
+	//powerMask
+	valuePtr = findObjectMember(params, _aa_target_power.paramArray[1]._name);
 	tempParam.SetString(_aa_target_power.paramArray[1]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, tempParam, dom.GetAllocator());
+	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
 
+	//methodname
 	method.SetString(_aa_target_power._name, dom.GetAllocator());
 
-	id.SetInt(requestId->GetInt()+1);
-	json->generateRequest(method, localParams, id);
+	id.SetInt(++subRequestId);
+	subRequest = json->generateRequest(method, localParams, id);
+
+	udsWorker->uds_send(subRequest);
+	subResponse = waitForResponse();
+
+	json->parse(subResponse, localDom);
+	subResult = json->tryTogetResult(localDom);
+
+	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+
+	if(subResultValue->GetInt() < 0)
+	{
+		delete localDom;
+		throw PluginError("Could not open Aardvark.");
+	}
+	else
+	{
+		delete localDom;
+	}
 
 }
 
 
-Value* I2c::aa_write()
+void I2c::aa_write(Value &params)
 {
 	Value method;
 	Value localParams;
+	Value tempParam;
 	Value id;
-
-	Value* data = NULL;
 	Value array;
+	int arraySize = 0;
+	Value* valuePtr = NULL;
+	Value* subResultValue= NULL;
+	Document* localDom = new Document();
 
-
-	method.SetString("Aardvark.aa_i2c_write", dom.GetAllocator());
 	localParams.SetObject();
-	localParams.AddMember("handle", 1, dom.GetAllocator());
+	//get Aardvark handle
+	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[0]._name);
+	tempParam.SetString(_aa_i2c_write.paramArray[0]._name, dom.GetAllocator());
+	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
 
-	array.SetArray();
-	array.PushBack(1, dom.GetAllocator());
-	array.PushBack(191, dom.GetAllocator());
+	//get slave addr
+	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[1]._name);
+	tempParam.SetString(_aa_i2c_write.paramArray[1]._name, dom.GetAllocator());
+	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
 
-	localParams.AddMember("data_out", array, dom.GetAllocator());
-	localParams.AddMember("slave_addr", 56, dom.GetAllocator());
-	localParams.AddMember("num_bytes", 2, dom.GetAllocator());
-	localParams.AddMember("flags", 0, dom.GetAllocator());
-	id.SetInt(5);
+	//get flags ?
+	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, dom.GetAllocator());
+	localParams.AddMember(tempParam, 0, dom.GetAllocator());
 
+	//get data and size
+	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[4]._name);
+	arraySize = valuePtr->Size();
+	tempParam.SetString(_aa_i2c_write.paramArray[4]._name, dom.GetAllocator());
+	localParams.AddMember(tempParam, *valuePtr, dom.GetAllocator());
+
+	//get num of bytes
+	tempParam.SetString(_aa_i2c_write.paramArray[3]._name, dom.GetAllocator());
+	localParams.AddMember(tempParam, arraySize, dom.GetAllocator());
+
+	method.SetString(_aa_i2c_write._name, dom.GetAllocator());
+	id.SetInt(++subRequestId);
 	subRequest = json->generateRequest(method, localParams, id);
 
-	return data;
+	udsWorker->uds_send(subRequest);
+	subResponse = waitForResponse();
+
+	json->parse(subResponse, localDom);
+	subResult = json->tryTogetResult(localDom);
+	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+
+	if(subResultValue->GetInt() < 0)
+	{
+		delete localDom;
+		throw PluginError("Could not open Aardvark.");
+	}
+	else
+	{
+		delete localDom;
+	}
+}
+
+
+
+void I2c::aa_close(Value &params)
+{
 
 }
+
+
 
 int I2c::getPortByUniqueId(unsigned int uniqueId)
 {
 	list<I2cDevice*>::iterator device = deviceList.begin();
-	int result = -1;
+	unsigned int result = 0;
 
 	while( device != deviceList.end())
 	{
@@ -295,6 +373,7 @@ int I2c::getPortByUniqueId(unsigned int uniqueId)
 		{
 			return (*device)->getPort();
 		}
+		++device;
 	}
 
 	return -1;
