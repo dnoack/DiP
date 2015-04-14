@@ -167,27 +167,18 @@ bool I2c::write(Value &params, Value &result)
 		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, dom.GetAllocator());
 		aa_target_power(params);
 
-
 		aa_write(params);
 
+		aa_close(params);
 
-
-		subRequest = "{\"jsonrpc\": \"2.0\", \"params\": { \"handle\": 1 } , \"method\": \"Aardvark.aa_close\", \"id\": 6}";
-		udsWorker->uds_send(subRequest);
-		subResponse = waitForResponse();
-		//check responsecode
-
-
-		//return bytes written to client
 		response = "{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}";
+
 	}
 	catch(PluginError &e)
 	{
 		printf("%s\n", e.get());
 		throw;
-
 	}
-
 	return true;
 }
 
@@ -356,6 +347,52 @@ void I2c::aa_write(Value &params)
 
 void I2c::aa_close(Value &params)
 {
+	Value method;
+	Value localParams;
+	Value id;
+	Value* subResultValue= NULL;
+
+	Value* deviceValue = NULL;
+	int device = -1;
+	Value tempParam;
+	Document* localDom = new Document();
+
+
+	//Get exact method name
+	method.SetString(_aa_close._name, dom.GetAllocator());
+	//Get all needed params
+	localParams.SetObject();
+	tempParam.SetString(_aa_close.paramArray[0]._name , dom.GetAllocator());
+
+	deviceValue = findObjectMember(params, _aa_close.paramArray[0]._name);
+	localParams.AddMember(tempParam, *deviceValue, dom.GetAllocator());
+	//id of this request is the one of the incomming request +1
+
+	id.SetInt(++subRequestId);
+
+	subRequest = json->generateRequest(method, localParams, id);
+
+	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
+	udsWorker->uds_send(subRequest);
+	subResponse = waitForResponse();
+	json->parse(subResponse, localDom);
+
+	subResult = json->tryTogetResult(localDom);
+
+	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+
+
+	if(subResultValue->GetInt() < 0)
+	{
+		delete localDom;
+		throw PluginError("Could not close Aardvark.");
+	}
+	else
+	{
+		params.AddMember("returnCode", subResultValue->GetInt(), dom.GetAllocator());
+		delete localDom;
+	}
+
 
 }
 
