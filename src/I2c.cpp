@@ -171,7 +171,10 @@ bool I2c::write(Value &params, Value &result)
 
 		aa_close(params);
 
-		response = "{\"jsonrpc\": \"2.0\", \"result\": \"OK\", \"id\": 7}";
+		result.SetObject();
+		result.AddMember("returnCode", "OK", dom.GetAllocator());
+
+		response = json->generateResponse(*(json->getId()), result);
 
 	}
 	catch(PluginError &e)
@@ -191,7 +194,7 @@ void I2c::aa_open(Value &params)
 	Value* subResultValue= NULL;
 
 	Value* deviceValue = NULL;
-	int device = -1;
+	int device = 0;
 	Value tempParam;
 	Document* localDom = new Document();
 
@@ -217,20 +220,26 @@ void I2c::aa_open(Value &params)
 	subResponse = waitForResponse();
 	json->parse(subResponse, localDom);
 
-	subResult = json->tryTogetResult(localDom);
-
-	subResultValue = findObjectMember(*subResult, "Aardvark", kNumberType);
-
-
-	if(subResultValue->GetInt() < 0)
+	if(checkSubResult(localDom))
 	{
-		delete localDom;
-		throw PluginError("Could not open Aardvark.");
+		subResult = json->tryTogetResult(localDom);
+		subResultValue = findObjectMember(*subResult, "Aardvark", kNumberType);
+
+		if(subResultValue->GetInt() < 0)
+		{
+			delete localDom;
+			throw PluginError(subResponse);
+		}
+		else
+		{
+			params.AddMember("Aardvark", subResultValue->GetInt(), dom.GetAllocator());
+			delete localDom;
+		}
 	}
 	else
 	{
-		params.AddMember("Aardvark", subResultValue->GetInt(), dom.GetAllocator());
 		delete localDom;
+		throw PluginError(subResponse);
 	}
 
 }
@@ -328,6 +337,7 @@ void I2c::aa_write(Value &params)
 	udsWorker->uds_send(subRequest);
 	subResponse = waitForResponse();
 
+
 	json->parse(subResponse, localDom);
 	subResult = json->tryTogetResult(localDom);
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
@@ -353,7 +363,6 @@ void I2c::aa_close(Value &params)
 	Value* subResultValue= NULL;
 
 	Value* deviceValue = NULL;
-	int device = -1;
 	Value tempParam;
 	Document* localDom = new Document();
 
@@ -401,7 +410,7 @@ void I2c::aa_close(Value &params)
 int I2c::getPortByUniqueId(unsigned int uniqueId)
 {
 	list<I2cDevice*>::iterator device = deviceList.begin();
-	unsigned int result = 0;
+	unsigned int result = -1;
 
 	while( device != deviceList.end())
 	{
@@ -413,7 +422,18 @@ int I2c::getPortByUniqueId(unsigned int uniqueId)
 		++device;
 	}
 
-	return -1;
+	return result;
+}
+
+
+bool I2c::checkSubResult(Document* dom)
+{
+	if(json->isError(dom))
+	{
+		return false;
+	}
+	else
+		return true;
 }
 
 

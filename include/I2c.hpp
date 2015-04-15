@@ -145,7 +145,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		void aa_write(Value &params);
 		void aa_close(Value &params);
 
-
+		bool checkSubResult(Document* dom);
 		string* waitForResponse();
 
 		void deleteMsgList();
