@@ -428,12 +428,18 @@ int I2c::getPortByUniqueId(unsigned int uniqueId)
 
 bool I2c::checkSubResult(Document* dom)
 {
-	if(json->isError(dom))
+	bool result = false;
+	try
 	{
-		return false;
+		if(json->isError(dom))
+			result = false;
 	}
-	else
-		return true;
+	catch(PluginError &e)
+	{
+		result = true;
+	}
+	return result;
+
 }
 
 
