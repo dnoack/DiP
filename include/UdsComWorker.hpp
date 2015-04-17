@@ -48,9 +48,9 @@ class UdsComWorker : public WorkerInterface<string>, public WorkerThreads{
 
 	private:
 
-		virtual void thread_listen(pthread_t partent_th, int socket, char* workerBuffer);
+		virtual void thread_listen();
 
-		virtual void thread_work(int socket);
+		virtual void thread_work();
 
 
 		bool requestInProgress;
