@@ -300,7 +300,6 @@ void I2c::aa_write(Value &params)
 	Value tempParam;
 	Value id;
 	Value array;
-	int arraySize = 0;
 	Value* valuePtr = NULL;
 	Value* subResultValue= NULL;
 	Document* localDom = new Document();
@@ -320,15 +319,10 @@ void I2c::aa_write(Value &params)
 	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, dom.GetAllocator());
 	localParams.AddMember(tempParam, 0, dom.GetAllocator());
 
-	//get data and size
-	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[4]._name);
-	arraySize = valuePtr->Size();
-	tempParam.SetString(_aa_i2c_write.paramArray[4]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, *valuePtr, dom.GetAllocator());
-
-	//get num of bytes
+	//get data
+	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[3]._name);
 	tempParam.SetString(_aa_i2c_write.paramArray[3]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, arraySize, dom.GetAllocator());
+	localParams.AddMember(tempParam, *valuePtr, dom.GetAllocator());
 
 	method.SetString(_aa_i2c_write._name, dom.GetAllocator());
 	id.SetInt(++subRequestId);
