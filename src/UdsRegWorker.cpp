@@ -116,20 +116,6 @@ void UdsRegWorker::thread_work()
 }
 
 
-int UdsRegWorker::uds_send(char* msg)
-{
-	int wrote = 0;
-
-	wrote = send(currentSocket, msg, strlen(msg), 0);
-	if(wrote == -1)
-	{
-		error = json->generateResponseError(*currentMsgId, -31013, "Could not send Data over UdsSocket.");
-		throw PluginError(error);
-	}
-	return wrote;
-}
-
-
 void UdsRegWorker::processRegistration()
 {
 	string* request = receiveQueue.back();
@@ -290,4 +276,21 @@ const char* UdsRegWorker::createPluginActiveMsg()
 
 	return msg;
 }
+
+int UdsRegWorker::transmit(char* data, int size)
+{
+	return send(currentSocket, data, size, 0);
+};
+
+
+int UdsRegWorker::transmit(const char* data, int size)
+{
+	return send(currentSocket, data, size, 0);
+};
+
+
+int UdsRegWorker::transmit(string* msg)
+{
+	return send(currentSocket, msg->c_str(), msg->size(), 0);
+};
 

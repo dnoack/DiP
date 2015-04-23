@@ -35,13 +35,10 @@ class UdsComWorker : public WorkerInterface<string>, public WorkerThreads{
 		UdsComWorker(int socket);
 		~UdsComWorker();
 
-		int uds_send(string* data);
-		int uds_send(const char* data);
 
-		//TODO: correct implementation
-		int transmit(char* data, int size){};
-		int transmit(const char* data, int size){};
-		int transmit(string* msg){};
+		int transmit(char* data, int size);
+		int transmit(const char* data, int size);
+		int transmit(string* msg);
 
 		//should only be called within thread_Work thread !
 		string* getNextMsg()

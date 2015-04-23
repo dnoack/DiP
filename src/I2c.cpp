@@ -63,7 +63,7 @@ void I2c::processMsg(string* msg)
 				requestId = json->getId();
 				subRequestId = requestId->GetInt();
 				executeFunction(*requestMethod, *params, result);
-				udsWorker->uds_send(response);
+				udsWorker->transmit(response, strlen(response));
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
 			}
@@ -76,7 +76,7 @@ void I2c::processMsg(string* msg)
 	}
 	catch(PluginError &e)
 	{
-		udsWorker->uds_send(e.get());
+		udsWorker->transmit(e.get(), strlen(e.get()));
 		delete *currentMsg;
 		currentMsg = msgList->erase(currentMsg);
 	}
@@ -123,7 +123,7 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 
 	//subrequest
 	subRequest = json->generateRequest(method, params, *requestId);
-	udsWorker->uds_send(subRequest);
+	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 	//###########
 
@@ -216,7 +216,7 @@ void I2c::aa_open(Value &params)
 	subRequest = json->generateRequest(method, localParams, id);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	udsWorker->uds_send(subRequest);
+	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 	json->parse(subResponse, localDom);
 
@@ -272,7 +272,7 @@ void I2c::aa_target_power(Value &params)
 	id.SetInt(++subRequestId);
 	subRequest = json->generateRequest(method, localParams, id);
 
-	udsWorker->uds_send(subRequest);
+	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 
 	json->parse(subResponse, localDom);
@@ -334,7 +334,7 @@ void I2c::aa_write(Value &params)
 	id.SetInt(++subRequestId);
 	subRequest = json->generateRequest(method, localParams, id);
 
-	udsWorker->uds_send(subRequest);
+	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 
 
@@ -382,7 +382,7 @@ void I2c::aa_close(Value &params)
 	subRequest = json->generateRequest(method, localParams, id);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	udsWorker->uds_send(subRequest);
+	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 	json->parse(subResponse, localDom);
 

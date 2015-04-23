@@ -1,14 +1,6 @@
-/*
- * UdsRegWorker.hpp
- *
- *  Created on: 	25.02.2015
- *  Last edited:	20.03.2015
- *  Author: 		dnoack
- */
 
 #ifndef UDSREGWORKER_HPP_
 #define UDSREGWORKER_HPP_
-
 
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -24,6 +16,7 @@
 #include "WorkerThreads.hpp"
 
 
+
 class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 
 	public:
@@ -32,16 +25,14 @@ class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 
 		bool isReady(){return ready;}
 
-		//TODO: correct implementation
-		int transmit(char* data, int size){};
-		int transmit(const char* data, int size){};
-		int transmit(string* msg){};
+		int transmit(char* data, int size);
+		int transmit(const char* data, int size);
+		int transmit(string* msg);
 
 	private:
 
 		virtual void thread_listen();
 		virtual void thread_work();
-
 
 		JsonRPC* json;
 		const char* error;
@@ -51,14 +42,12 @@ class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 		unsigned int state;
 
 
-		int uds_send(char* msg);
 		void processRegistration();
 		//createAnnounceMsg will be created by UdsRegClient
 		bool handleAnnounceACKMsg(string* msg);
 		const char* createRegisterMsg();
 		bool handleRegisterACKMsg(string* msg);
 		const char* createPluginActiveMsg();
-
 
 };
 

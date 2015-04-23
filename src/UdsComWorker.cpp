@@ -45,20 +45,6 @@ UdsComWorker::~UdsComWorker()
 }
 
 
-int UdsComWorker::uds_send(string* data)
-{
-	//printf("Sending: %s\n", data->c_str());
-	return send(currentSocket, data->c_str(), data->size(), 0);
-}
-
-
-int UdsComWorker::uds_send(const char* data)
-{
-	return send(currentSocket, data, strlen(data), 0);
-}
-
-
-
 
 void UdsComWorker::thread_work()
 {
@@ -157,6 +143,23 @@ void UdsComWorker::thread_listen()
 		}
 	}
 }
+
+int UdsComWorker::transmit(char* data, int size)
+{
+	return send(currentSocket, data, size, 0);
+};
+
+
+int UdsComWorker::transmit(const char* data, int size)
+{
+	return send(currentSocket, data, size, 0);
+};
+
+
+int UdsComWorker::transmit(string* msg)
+{
+	return send(currentSocket, msg->c_str(), msg->size(), 0);
+};
 
 
 
