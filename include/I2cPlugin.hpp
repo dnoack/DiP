@@ -1,16 +1,9 @@
-/*
- * I2cPlugin.hpp
- *
- *  Created on: 17.03.2015
- *  Author: dnoack
- */
-
 #ifndef I2CPLUGIN_HPP_
 #define I2CPLUGIN_HPP_
 
 
 #define REG_PATH "/tmp/RsdRegister.uds"
-#define COM_PATH "/tmp/ganzneu.uds"
+#define COM_PATH "/tmp/i2cdip.uds"
 #define PLUGIN_NAME "i2c"
 #define PLUGIN_NUMBER 2
 #define WAIT_TIME 3 //wait time for loop
@@ -27,15 +20,15 @@ class I2cPlugin {
 		~I2cPlugin();
 
 
-		void startCommunication();
-		void registerToRSD();
-
 		static list<string*>* getFuncList(){return funcList;}
 
+		void start();
 
 	private:
 
 		static list<string*>* funcList;
+
+		void deleteFuncList();
 
 		UdsServer* comServer;
 		UdsRegClient* regClient;

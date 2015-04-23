@@ -1,15 +1,6 @@
-/*
- * I2cPlugin.cpp
- *
- *  Created on: 17.03.2015
- *      Author: dnoack
- */
-
-
 #include <I2cPlugin.hpp>
 #include "UdsServer.hpp"
 #include "I2c.hpp"
-
 
 
 list<string*>* I2cPlugin::funcList;
@@ -32,30 +23,46 @@ I2cPlugin::~I2cPlugin()
 {
 	delete comServer;
 	delete regClient;
-	I2c::deleteFuncList();
+	deleteFuncList();
 }
 
 
-
-void I2cPlugin::startCommunication()
+void I2cPlugin::start()
 {
-	pluginActive = regClient->connectToRSD();
-
-	while(pluginActive)
+	try
 	{
-		sleep(WAIT_TIME);
-		comServer->checkForDeletableWorker();
+		regClient->connectToRSD();
+		regClient->registerToRSD();
+
+		pluginActive = true;
+		while(pluginActive)
+		{
+			sleep(WAIT_TIME);
+			comServer->checkForDeletableWorker();
+		}
+	}
+	catch(PluginError &e)
+	{
+		printf("%s \n", e.get());
+	}
+}
+
+void I2cPlugin::deleteFuncList()
+{
+	list<string*>::iterator i = funcList->begin();
+	while(i != funcList->end())
+	{
+		delete *i;
+		i = funcList->erase(i);
 	}
 }
 
 
 int main(int argc, const char** argv)
 {
-
 	I2cPlugin* plugin = new I2cPlugin();
-	plugin->startCommunication();
+	plugin->start();
 	delete plugin;
 	return 0;
 }
-
 

@@ -16,19 +16,10 @@
 #include "RemoteAardvark.hpp"
 
 
-list<string*>* I2c::funcList;
+
 list<I2cDevice*> I2c::deviceList;
 
 
-void I2c::deleteFuncList()
-{
-	list<string*>::iterator funcItr = funcList->begin();
-	while(funcItr != funcList->end())
-	{
-		delete *funcItr;
-		funcItr = funcList->erase(funcItr);
-	}
-}
 
 
 void I2c::deleteMsgList()
@@ -89,8 +80,6 @@ bool I2c::getI2cDevices(Value &params, Value &result)
 {
 
 	getAardvarkDevices(params, result);
-
-
 
 
 	//.. call further methods for getting other devices

@@ -62,7 +62,6 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 			funcMap.insert(pair<const char*, i2cfptr>("i2c.getAardvarkDevices", fptr));
 			fptr= &I2c::getI2cDevices;
 			funcMap.insert(pair<const char*, i2cfptr>("i2c.getI2cDevices", fptr));
-			funcList = getAllFunctionNames();
 		}
 
 
@@ -71,16 +70,6 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 			delete json;
 		};
 
-
-		/**
-		 * FuncList will be called by UdsRegWorker during the registration process to RSD.
-		 * \return Pointer to a list which contains all functionnames as string.
-		 *   This names can be used to call the functions via json rpc request.
-		 */
-		static list<string*>* getFuncList(){return funcList;}
-
-		/** Deletes funcList and deallocated all of its content.*/
-		static void deleteFuncList();
 
 		/**
 		 * Main method for processing a incomming message.
@@ -95,8 +84,6 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 
 	private:
 
-		/** Stores all functionname from this class after a call of getAllFunctionNames()*/
-		static list<string*>* funcList;
 		/** Stores all I2cDevices which can be get through rpc messages to the corresponding plugins.*/
 		static list<I2cDevice*> deviceList;
 

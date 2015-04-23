@@ -1,23 +1,17 @@
-/*
- * UdsRegWorker.cpp
- *
- *  Created on: 25.02.2015
- *      Author: Dave
- */
-
-
 #include <sys/select.h>
 #include <UdsRegWorker.hpp>
 #include "errno.h"
 
+#include "I2cPlugin.hpp"
 #include "Plugin_Error.h"
-
-//Plugin depended include
-#include "I2c.hpp"
 
 
 UdsRegWorker::UdsRegWorker(int socket)
 {
+	memset(receiveBuffer, '\0', BUFFER_SIZE);
+	this->listen_thread_active = false;
+	this->worker_thread_active = false;
+	this->recvSize = 0;
 	this->currentMsgId = NULL;
 	this->error = NULL;
 	this->currentSocket = socket;
@@ -25,12 +19,17 @@ UdsRegWorker::UdsRegWorker(int socket)
 	this->state = NOT_ACTIVE;
 
 	StartWorkerThread();
+
+	if(wait_for_listener_up() != 0)
+		throw PluginError("Creation of Listener/worker threads failed.");
 }
 
 
 
 UdsRegWorker::~UdsRegWorker()
 {
+	worker_thread_active = false;
+	listen_thread_active = false;
 
 	pthread_cancel(getListener());
 	pthread_cancel(getWorker());
@@ -48,6 +47,7 @@ void UdsRegWorker::thread_listen()
 	listen_thread_active = true;
 	fd_set rfds;
 	int retval;
+
 	pthread_t worker_thread = getWorker();
 	configSignals();
 
@@ -63,15 +63,14 @@ void UdsRegWorker::thread_listen()
 
 		if(retval < 0)
 		{
-			//error
+			//TODO: error
 		}
 		else if(FD_ISSET(currentSocket, &rfds))
 		{
-			recvSize = recv( currentSocket , receiveBuffer, BUFFER_SIZE, 0);
+			recvSize = recv(currentSocket , receiveBuffer, BUFFER_SIZE, 0);
 
 			if(recvSize > 0)
 			{
-				printf("Received: %s", receiveBuffer);
 				pushReceiveQueue(new string(receiveBuffer, recvSize));
 				pthread_kill(worker_thread, SIGUSR1);
 			}
@@ -104,6 +103,7 @@ void UdsRegWorker::thread_work()
 		switch(currentSig)
 		{
 			case SIGUSR1:
+
 				processRegistration();
 				break;
 
@@ -121,13 +121,10 @@ void UdsRegWorker::processRegistration()
 	string* request = receiveQueue.back();
 	const char* response = NULL;
 
-	printf("Received: %s \n", request->c_str());
-
-	try{
-
+	try
+	{
 		json->parse(request);
 		currentMsgId = json->tryTogetId();
-		currentMsgId->SetInt(currentMsgId->GetInt()+1);
 
 		switch(state)
 		{
@@ -138,7 +135,7 @@ void UdsRegWorker::processRegistration()
 				{
 					state = ANNOUNCED;
 					response = createRegisterMsg();
-					send(currentSocket, response, strlen(response), 0);
+					transmit(response, strlen(response));
 				}
 				break;
 			case ANNOUNCED:
@@ -148,7 +145,7 @@ void UdsRegWorker::processRegistration()
 					//TODO: check if Plugin com part is ready, if yes -> state = active
 					//create pluginActive msg
 					response = createPluginActiveMsg();
-					send(currentSocket, response, strlen(response), 0);
+					transmit(response, strlen(response));
 				}
 				//check for register ack then switch state to active
 				break;
@@ -169,9 +166,36 @@ void UdsRegWorker::processRegistration()
 	{
 		state = BROKEN;
 		error = e.get();
-		send(currentSocket, error, strlen(error), 0);
+		transmit(e.get(), strlen(e.get()));
 	}
 	popReceiveQueue();
+}
+
+
+void UdsRegWorker::sendAnnounceMsg(const char* pluginName, int pluginNumber, const char* pluginPath)
+{
+	Value method;
+	Value params;
+	Value id;
+	const char* announceMsg = NULL;
+	Document* dom = json->getRequestDOM();
+
+	try
+	{
+		method.SetString("announce");
+		params.SetObject();
+		params.AddMember("pluginName", StringRef(pluginName), dom->GetAllocator());
+		params.AddMember("pluginNumber", pluginNumber, dom->GetAllocator());
+		params.AddMember("udsFilePath", StringRef(pluginPath), dom->GetAllocator());
+		id.SetInt(1);
+
+		announceMsg = json->generateRequest(method, params, id);
+		transmit(announceMsg, strlen(announceMsg));
+	}
+	catch(PluginError &e)
+	{
+		printf("%s \n", e.get());
+	}
 }
 
 
@@ -182,20 +206,25 @@ bool UdsRegWorker::handleAnnounceACKMsg(string* msg)
 	const char* resultString = NULL;
 	bool result = false;
 
-
-	resultValue = json->tryTogetResult();
-	if(resultValue->IsString())
+	try
 	{
-		resultString = resultValue->GetString();
-		if(strcmp(resultString, "announceACK") == 0)
-			result = true;
+		resultValue = json->tryTogetResult();
+		if(resultValue->IsString())
+		{
+			resultString = resultValue->GetString();
+			if(strcmp(resultString, "announceACK") == 0)
+				result = true;
+		}
+		else
+		{
+			error = json->generateResponseError(*currentMsgId, -31010, "Awaited \"announceACK\" but didn't receive it.");
+			throw PluginError(error);
+		}
 	}
-	else
+	catch(PluginError &e)
 	{
-		error = json->generateResponseError(*currentMsgId, -31010, "Awaited \"announceACK\" but didn't receive it.");
-		throw PluginError(error);
+		throw;
 	}
-
 	return result;
 }
 
@@ -207,12 +236,13 @@ const char* UdsRegWorker::createRegisterMsg()
 	Value params;
 	Value functionArray;
 
+
 	list<string*>* funcList;
 	string* functionName;
 
 
 	//get methods from plugin
-	funcList = I2c::getFuncList();
+	funcList = I2cPlugin::getFuncList();
 	method.SetString("register");
 	params.SetObject();
 	functionArray.SetArray();
@@ -237,18 +267,24 @@ bool UdsRegWorker::handleRegisterACKMsg(string* msg)
 	Value* resultValue = NULL;
 	bool result = false;
 
-
-	resultValue = json->tryTogetResult();
-	if(resultValue->IsString())
+	try
 	{
-		resultString = resultValue->GetString();
-		if(strcmp(resultString, "registerACK") == 0)
-			result = true;
+		resultValue = json->tryTogetResult();
+		if(resultValue->IsString())
+		{
+			resultString = resultValue->GetString();
+			if(strcmp(resultString, "registerACK") == 0)
+				result = true;
+		}
+		else
+		{
+			error = json->generateResponseError(*currentMsgId, -31011, "Awaited \"registerACK\" but didn't receive it.");
+			throw PluginError(error);
+		}
 	}
-	else
+	catch(PluginError &e)
 	{
-		error = json->generateResponseError(*currentMsgId, -31011, "Awaited \"registerACK\" but didn't receive it.");
-		throw PluginError(error);
+		throw;
 	}
 	return result;
 }
@@ -263,7 +299,6 @@ const char* UdsRegWorker::createPluginActiveMsg()
 	const char* msg = NULL;
 
 	method.SetString("pluginActive");
-
 	msg = json->generateRequest(method, *params, *id);
 
 	return msg;
