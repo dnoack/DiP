@@ -205,34 +205,26 @@ const char* UdsRegWorker::createRegisterMsg()
 	Document dom;
 	Value method;
 	Value params;
-	Value f;
-	Value fNumber;
-	int count = 1;
-	char* buffer = NULL;
+	Value functionArray;
 
 	list<string*>* funcList;
-	string* tempString;
+	string* functionName;
 
 
 	//get methods from plugin
 	funcList = I2c::getFuncList();
 	method.SetString("register");
 	params.SetObject();
-	for(list<string*>::const_iterator i = funcList->begin(); i != funcList->end(); ++i)
+	functionArray.SetArray();
+
+	for(list<string*>::iterator ifName = funcList->begin(); ifName != funcList->end(); )
 	{
-		memset(buffer, '\0', 0);
-		buffer = new char[10];
-		tempString = *i;
-
-		sprintf(buffer, "f%d", count);
-		fNumber.SetString(buffer, dom.GetAllocator());
-		f.SetString(tempString->c_str(), tempString->size());
-		params.AddMember(fNumber,f, dom.GetAllocator());
-
-		delete[] buffer;
-		count++;
+		functionName = *ifName;
+		functionArray.PushBack(StringRef(functionName->c_str()), dom.GetAllocator());
+		ifName = funcList->erase(ifName);
 	}
-
+	delete funcList;
+	params.AddMember("functions", functionArray, dom.GetAllocator());
 
 	return json->generateRequest(method, params, *currentMsgId);
 }

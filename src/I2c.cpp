@@ -400,7 +400,6 @@ void I2c::aa_close(Value &params)
 }
 
 
-
 int I2c::getPortByUniqueId(unsigned int uniqueId)
 {
 	list<I2cDevice*>::iterator device = deviceList.begin();
