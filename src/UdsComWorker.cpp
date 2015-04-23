@@ -26,6 +26,9 @@ UdsComWorker::UdsComWorker(int socket)
 	this->i2c = new I2c(this);
 
 	StartWorkerThread();
+
+	if(wait_for_listener_up() != 0)
+			throw PluginError("Creation of Listener/worker threads failed.");
 }
 
 
