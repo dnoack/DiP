@@ -49,7 +49,6 @@ void UdsRegWorker::thread_listen()
 	int retval;
 
 	pthread_t worker_thread = getWorker();
-	configSignals();
 
 	FD_ZERO(&rfds);
 	FD_SET(currentSocket, &rfds);
@@ -92,9 +91,10 @@ void UdsRegWorker::thread_work()
 	worker_thread_active = true;
 
 	//start the listenerthread and remember the theadId of it
+	configSignals();
 	StartListenerThread();
 
-	configSignals();
+
 
 	while(worker_thread_active)
 	{

@@ -9,6 +9,11 @@ list<string*>* I2cPlugin::funcList;
 I2cPlugin::I2cPlugin()
 {
 	pluginActive = true;
+	sigemptyset(&origmask);
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGUSR1);
+	sigaddset(&sigmask, SIGUSR2);
+	pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
 	//get List of key, which are supported by the driver
 	I2c* tempDriver = new I2c(NULL);
 	funcList = tempDriver->getAllFunctionNames();

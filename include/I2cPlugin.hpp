@@ -33,6 +33,8 @@ class I2cPlugin {
 		UdsServer* comServer;
 		UdsRegClient* regClient;
 		bool pluginActive;
+		sigset_t sigmask;
+		sigset_t origmask;
 };
 
 #endif /* I2CPLUGIN_HPP_ */
