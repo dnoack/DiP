@@ -1,5 +1,5 @@
-#ifndef INCLUDE_UDSSERVER_HPP_
-#define INCLUDE_UDSSERVER_HPP_
+#ifndef I2C_PLUGIN_INCLUDE_UDSSERVER_HPP_
+#define I2C_PLUGIN_INCLUDE_UDSSERVER_HPP_
 
 //unix domain socket definition
 #include <sys/un.h>
@@ -49,4 +49,4 @@ class UdsServer{
 
 };
 
-#endif /* INCLUDE_UDSSERVER_HPP_ */
+#endif /* I2C_PLUGIN_INCLUDE_UDSSERVER_HPP_ */

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_UDSREGCLIENT_HPP_
-#define INCLUDE_UDSREGCLIENT_HPP_
+#ifndef I2C_PLUGIN_INCLUDE_UDSREGCLIENT_HPP_
+#define I2C_PLUGIN_INCLUDE_UDSREGCLIENT_HPP_
 
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -47,4 +47,4 @@ class UdsRegClient{
 		const char* pluginPath;
 };
 
-#endif /* INCLUDE_UDSREGCLIENT_HPP_ */
+#endif /* I2C_PLUGIN_INCLUDE_UDSREGCLIENT_HPP_ */

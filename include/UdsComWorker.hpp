@@ -5,8 +5,8 @@
  *      Author: dnoack
  */
 
-#ifndef INCLUDE_UDSCOMWORKER_HPP_
-#define INCLUDE_UDSCOMWORKER_HPP_
+#ifndef I2C_PLUGIN_INCLUDE_UDSCOMWORKER_HPP_
+#define I2C_PLUGIN_INCLUDE_UDSCOMWORKER_HPP_
 
 
 //unix domain socket definition

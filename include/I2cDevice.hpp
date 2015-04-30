@@ -5,8 +5,8 @@
  *      Author: dnoack
  */
 
-#ifndef INCLUDE_I2CDEVICE_HPP_
-#define INCLUDE_I2CDEVICE_HPP_
+#ifndef I2C_PLUGIN_INCLUDE_I2CDEVICE_HPP_
+#define I2C_PLUGIN_INCLUDE_I2CDEVICE_HPP_
 
 
 class I2cDevice{
@@ -40,4 +40,4 @@ class I2cDevice{
 
 
 
-#endif /* INCLUDE_I2CDEVICE_HPP_ */
+#endif /* I2C_PLUGIN_INCLUDE_I2CDEVICE_HPP_ */
