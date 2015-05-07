@@ -12,12 +12,15 @@
 /*! Timeout in seconds for waiting for a subresponse*/
 #define SUBRESPONSE_TIMEOUT 5
 
+#include <pthread.h>
+
 #include "document.h"
 #include "writer.h"
 
 #include "DriverInterface.h"
 #include "JsonRPC.hpp"
 #include "I2cDevice.hpp"
+
 
 
 using namespace rapidjson;
@@ -33,8 +36,9 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 	public:
 
 
-		I2c(UdsComWorker* udsWorker) :DriverInterface<I2c*, i2cfptr>(this)
+		I2c(UdsComWorker* udsWorker) : DriverInterface<I2c*, i2cfptr>(this)
 		{
+			pthread_mutex_init(&rIPMutex, NULL);
 			i2cfptr fptr;
 
 			this-> udsWorker = udsWorker;
@@ -68,6 +72,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		~I2c()
 		{
 			delete json;
+			pthread_mutex_destroy(&rIPMutex);
 		};
 
 
@@ -81,6 +86,8 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
 		void processMsg(string* msg);
+
+		bool isRequestInProcess();
 
 	private:
 
@@ -102,6 +109,8 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		JsonRPC* json;
 		Document dom;
 		Value* requestMethod;
+		pthread_mutex_t rIPMutex;
+		bool requestInProcess;
 
 		/*! The json rpc id value of the current processing main request (received from RSD).*/
 		Value* requestId;
@@ -138,6 +147,15 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		void deleteMsgList();
 
 		int getPortByUniqueId(unsigned int);
+
+
+
+
+
+		void setRequestInProcess();
+
+		void setRequestNotInProcess();
+
 
 
 };

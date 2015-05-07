@@ -1,10 +1,3 @@
-/*
- * I2c.cpp
- *
- *  Created on: 	17.03.2015
- *  Last edited:	20.03.2015
- *  Author: 		dnoack
- */
 
 #include "unistd.h"
 #include "signal.h"
@@ -49,6 +42,7 @@ void I2c::processMsg(string* msg)
 			json->parse(*currentMsg);
 			if(json->isRequest())
 			{
+				setRequestInProcess();
 				requestMethod = json->tryTogetMethod();
 				params = json->tryTogetParams();
 				requestId = json->getId();
@@ -57,6 +51,7 @@ void I2c::processMsg(string* msg)
 				udsWorker->transmit(response, strlen(response));
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
+				setRequestNotInProcess();
 			}
 			else if(json->isNotification())
 			{
@@ -70,6 +65,7 @@ void I2c::processMsg(string* msg)
 		udsWorker->transmit(e.get(), strlen(e.get()));
 		delete *currentMsg;
 		currentMsg = msgList->erase(currentMsg);
+		setRequestNotInProcess();
 	}
 	deleteMsgList();
 }
@@ -435,4 +431,30 @@ string* I2c::waitForResponse()
 	subResponse = udsWorker->getNextMsg();
 	printf("SubResponse: %s\n", subResponse->c_str());
 	return subResponse;
+}
+
+
+bool I2c::isRequestInProcess()
+{
+	bool result = false;
+	pthread_mutex_lock(&rIPMutex);
+	result = requestInProcess;
+	pthread_mutex_unlock(&rIPMutex);
+	return result;
+}
+
+
+void I2c::setRequestInProcess()
+{
+	pthread_mutex_lock(&rIPMutex);
+	requestInProcess = true;
+	pthread_mutex_unlock(&rIPMutex);
+}
+
+
+void I2c::setRequestNotInProcess()
+{
+	pthread_mutex_lock(&rIPMutex);
+	requestInProcess = false;
+	pthread_mutex_unlock(&rIPMutex);
 }

@@ -11,6 +11,7 @@
 #include "UdsComWorker.hpp"
 #include "UdsServer.hpp"
 #include "Plugin_Error.h"
+#include "Utils.h"
 #include "I2c.hpp"
 
 
@@ -21,7 +22,6 @@ UdsComWorker::UdsComWorker(int socket)
 
 	this->request = 0;
 	this->response = 0;
-	this->requestInProgress = false;
 	this->currentSocket = socket;
 	this->i2c = new I2c(this);
 
@@ -69,15 +69,19 @@ void UdsComWorker::thread_work()
 			case SIGUSR1:
 				while(getReceiveQueueSize() > 0)
 				{
-					requestInProgress = true;
-					request = receiveQueue.back();
-					printf("Received: %s\n", request->c_str());
+					if(!i2c->isRequestInProcess())
+					{
+						request = receiveQueue.back();
+						dyn_print("Received: %s\n", request->c_str());
+						i2c->processMsg(request);
+						popReceiveQueue();
+					}
 
-					i2c->processMsg(request);
-
-					popReceiveQueue();
-					requestInProgress = false;
 				}
+				break;
+
+			//can happen if the notfication + first message arrives separated
+			case SIGUSR2:
 				break;
 
 
@@ -120,7 +124,7 @@ void UdsComWorker::thread_listen()
 
 			if(recvSize > 0)
 			{
-				if(!requestInProgress)
+				if(!i2c->isRequestInProcess())
 				{
 					//add received data in buffer to queue
 					pushReceiveQueue(new string(receiveBuffer, recvSize));

@@ -55,12 +55,10 @@ class UdsComWorker : public WorkerInterface<string>, public WorkerThreads{
 		virtual void thread_work();
 
 
-		bool requestInProgress;
 		string* request;
 		string* response;
 		int currentSocket;
 		I2c* i2c;
-
 };
 
 
