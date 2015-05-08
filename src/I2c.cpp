@@ -60,7 +60,7 @@ void I2c::processMsg(string* msg)
 			}
 		}
 	}
-	catch(PluginError &e)
+	catch(Error &e)
 	{
 		udsWorker->transmit(e.get(), strlen(e.get()));
 		delete *currentMsg;
@@ -162,7 +162,7 @@ bool I2c::write(Value &params, Value &result)
 		response = json->generateResponse(*(json->getId()), result);
 
 	}
-	catch(PluginError &e)
+	catch(Error &e)
 	{
 		printf("%s\n", e.get());
 		throw;
@@ -213,7 +213,7 @@ void I2c::aa_open(Value &params)
 		if(subResultValue->GetInt() < 0)
 		{
 			delete localDom;
-			throw PluginError(subResponse);
+			throw Error(subResponse);
 		}
 		else
 		{
@@ -224,7 +224,7 @@ void I2c::aa_open(Value &params)
 	else
 	{
 		delete localDom;
-		throw PluginError(subResponse);
+		throw Error(subResponse);
 	}
 
 }
@@ -268,7 +268,7 @@ void I2c::aa_target_power(Value &params)
 	if(subResultValue->GetInt() < 0)
 	{
 		delete localDom;
-		throw PluginError("Could not open Aardvark.");
+		throw Error("Could not open Aardvark.");
 	}
 	else
 	{
@@ -324,7 +324,7 @@ void I2c::aa_write(Value &params)
 	if(subResultValue->GetInt() < 0)
 	{
 		delete localDom;
-		throw PluginError("Could not open Aardvark.");
+		throw Error("Could not open Aardvark.");
 	}
 	else
 	{
@@ -373,7 +373,7 @@ void I2c::aa_close(Value &params)
 	if(subResultValue->GetInt() < 0)
 	{
 		delete localDom;
-		throw PluginError("Could not close Aardvark.");
+		throw Error("Could not close Aardvark.");
 	}
 	else
 	{
@@ -412,7 +412,7 @@ bool I2c::checkSubResult(Document* dom)
 		if(json->isError(dom))
 			result = false;
 	}
-	catch(PluginError &e)
+	catch(Error &e)
 	{
 		result = true;
 	}
@@ -426,7 +426,7 @@ string* I2c::waitForResponse()
 	int retCode = 0;
 	retCode = sigtimedwait(&set, NULL, &timeout);
 	if(retCode < 0)
-		throw PluginError("Timeout waiting for subResponse.\n");
+		throw Error("Timeout waiting for subResponse.\n");
 
 	subResponse = udsWorker->getNextMsg();
 	printf("SubResponse: %s\n", subResponse->c_str());

@@ -10,7 +10,7 @@
 
 #include "UdsComWorker.hpp"
 #include "UdsServer.hpp"
-#include "Plugin_Error.h"
+#include "Error.hpp"
 #include "Utils.h"
 #include "I2c.hpp"
 
@@ -28,7 +28,7 @@ UdsComWorker::UdsComWorker(int socket)
 	StartWorkerThread();
 
 	if(wait_for_listener_up() != 0)
-			throw PluginError("Creation of Listener/worker threads failed.");
+			throw Error("Creation of Listener/worker threads failed.");
 }
 
 

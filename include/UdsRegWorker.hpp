@@ -16,7 +16,7 @@
 #include "JsonRPC.hpp"
 #include "WorkerInterface.hpp"
 #include "WorkerThreads.hpp"
-#include "Plugin_Error.h"
+#include "Error.hpp"
 
 
 class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
