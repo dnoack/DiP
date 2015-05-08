@@ -1,10 +1,12 @@
 
-#ifndef UDSREGWORKER_HPP_
-#define UDSREGWORKER_HPP_
+#ifndef INCLUDE_UDSREGWORKER_HPP_
+#define INCLUDE_UDSREGWORKER_HPP_
 
+#include "errno.h"
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <cstdio>
@@ -14,7 +16,7 @@
 #include "JsonRPC.hpp"
 #include "WorkerInterface.hpp"
 #include "WorkerThreads.hpp"
-
+#include "Plugin_Error.h"
 
 
 class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
@@ -23,10 +25,9 @@ class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 		UdsRegWorker(int socket);
 		~UdsRegWorker();
 
-		bool isReady(){return ready;}
+
 		void sendAnnounceMsg(const char* pluginName, int pluginNumber, const char* pluginPath);
 
-		int transmit(char* data, int size);
 		int transmit(const char* data, int size);
 		int transmit(string* msg);
 
@@ -38,7 +39,7 @@ class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 		JsonRPC* json;
 		const char* error;
 		Value* currentMsgId;
-		int currentSocket;
+
 		enum REG_STATE{NOT_ACTIVE, ANNOUNCED, REGISTERED, ACTIVE, BROKEN};
 		unsigned int state;
 
@@ -51,4 +52,4 @@ class UdsRegWorker : public WorkerInterface<string>, public WorkerThreads{
 
 };
 
-#endif /* UDSREGWORKER_HPP_ */
+#endif /* INCLUDE_UDSREGWORKER_HPP_ */

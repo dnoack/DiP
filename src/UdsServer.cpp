@@ -77,7 +77,7 @@ void UdsServer::pushWorkerList(UdsComWorker* newWorker)
 {
 	pthread_mutex_lock(&wLmutex);
 	workerList.push_back(newWorker);
-	printf("New UdsWorker : %d\n", workerList.size());
+	printf("New UdsWorker : %lu \n", workerList.size());
 	pthread_mutex_unlock(&wLmutex);
 }
 
@@ -93,7 +93,7 @@ void UdsServer::checkForDeletableWorker()
 		{
 			delete *i;
 			i = workerList.erase(i);
-			printf("UdsWorker deleted from list, %d left.\n", workerList.size());
+			printf("UdsWorker deleted from list, %lu  left.\n", workerList.size());
 		}
 		else
 			++i;

@@ -1,9 +1,7 @@
-#include <sys/select.h>
-#include <UdsRegWorker.hpp>
-#include "errno.h"
 
+
+#include <UdsRegWorker.hpp>
 #include "I2cPlugin.hpp"
-#include "Plugin_Error.h"
 
 
 UdsRegWorker::UdsRegWorker(int socket)
@@ -37,6 +35,8 @@ UdsRegWorker::~UdsRegWorker()
 	WaitForListenerThreadToExit();
 	WaitForWorkerThreadToExit();
 
+	deleteReceiveQueue();
+
 	delete json;
 }
 
@@ -56,7 +56,6 @@ void UdsRegWorker::thread_listen()
 	while(listen_thread_active)
 	{
 		memset(receiveBuffer, '\0', BUFFER_SIZE);
-		ready = true;
 
 		retval = pselect(currentSocket+1, &rfds, NULL, NULL, NULL, &origmask);
 
@@ -303,11 +302,6 @@ const char* UdsRegWorker::createPluginActiveMsg()
 
 	return msg;
 }
-
-int UdsRegWorker::transmit(char* data, int size)
-{
-	return send(currentSocket, data, size, 0);
-};
 
 
 int UdsRegWorker::transmit(const char* data, int size)
