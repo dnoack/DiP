@@ -40,7 +40,7 @@ class UdsRegClient{
 		UdsRegWorker* regWorker;
 		bool ready;
 		int optionflag;
-		int currentSocket;
+		int connection_socket;
 
 		const char* pluginName;
 		int pluginNumber;

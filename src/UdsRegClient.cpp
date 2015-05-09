@@ -14,7 +14,7 @@ UdsRegClient::UdsRegClient(const char* pluginName, int pluginNumber, const char*
 	optionflag = 1;
 
 	ready = false;
-	currentSocket = socket(AF_UNIX, SOCK_STREAM, 0);
+	connection_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	address.sun_family = AF_UNIX;
 	strncpy(address.sun_path, regPath, size);
 	addrlen = sizeof(address);
@@ -30,10 +30,10 @@ UdsRegClient::~UdsRegClient()
 
 void UdsRegClient::connectToRSD()
 {
-	int status = connect(currentSocket, (struct sockaddr*)&address, addrlen);
+	int status = connect(connection_socket, (struct sockaddr*)&address, addrlen);
 
 	if(status > -1)
-		regWorker = new UdsRegWorker(currentSocket);
+		regWorker = new UdsRegWorker(connection_socket);
 	else
 		throw Error("Fehler beim Verbinden zu RSD.\n");
 }
