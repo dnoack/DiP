@@ -19,7 +19,7 @@ I2cPlugin::I2cPlugin()
 	funcList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 
-	regClient = new UdsRegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, sizeof(REG_PATH), COM_PATH);
+	regClient = new UdsRegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, COM_PATH);
 	comServer = new UdsServer(COM_PATH, sizeof(COM_PATH));
 }
 
@@ -37,7 +37,7 @@ void I2cPlugin::start()
 	try
 	{
 		regClient->connectToRSD();
-		regClient->registerToRSD();
+		regClient->sendAnnounceMsg();
 
 		pluginActive = true;
 		while(pluginActive)
@@ -60,9 +60,10 @@ void I2cPlugin::deleteFuncList()
 		delete *i;
 		i = funcList->erase(i);
 	}
+	delete funcList;
 }
 
-
+#ifndef TESTMODE
 int main(int argc, const char** argv)
 {
 	I2cPlugin* plugin = new I2cPlugin();
@@ -70,4 +71,5 @@ int main(int argc, const char** argv)
 	delete plugin;
 	return 0;
 }
+#endif
 

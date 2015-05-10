@@ -1,5 +1,5 @@
-#ifndef I2CPLUGIN_HPP_
-#define I2CPLUGIN_HPP_
+#ifndef INCLUDE_I2CPLUGIN_HPP_
+#define INCLUDE_I2CPLUGIN_HPP_
 
 
 #define REG_PATH "/tmp/RsdRegister.uds"
@@ -37,4 +37,4 @@ class I2cPlugin {
 		sigset_t origmask;
 };
 
-#endif /* I2CPLUGIN_HPP_ */
+#endif /* INCLUDE_I2CPLUGIN_HPP_ */
