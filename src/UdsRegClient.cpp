@@ -62,8 +62,8 @@ void UdsRegClient::processRegistration(string* msg)
 		json->parse(msg);
 		currentMsgId = json->tryTogetId();
 
-		//if(json->isError())
-			//throw Error(-1102, "Received json rpc error response.");
+		if(json->isError())
+			throw Error(-1102, "Received json rpc error response.");
 
 		switch(state)
 		{
