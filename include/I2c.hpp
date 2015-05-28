@@ -51,6 +51,8 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 			this->msgList = NULL;
 			this->subRequestId = 0;
 			this->json = new JsonRPC();
+			requestInProcess = false;
+			globalDom = NULL;
 
 			//configure signal SIGUSR2 and timeout for receiving subresponses
 			sigemptyset(&set);
@@ -107,6 +109,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		string* subResponse;
 
 		JsonRPC* json;
+		Document* globalDom;
 		Document dom;
 		Value* requestMethod;
 		pthread_mutex_t rIPMutex;

@@ -8,6 +8,7 @@ socklen_t UdsRegClient::addrlen;
 UdsRegClient::UdsRegClient(const char* pluginName, int pluginNumber, const char* regPath, const char* comPath)
 {
 	this->regPath = regPath;
+	globalDom = NULL;
 	regWorker = NULL;
 	optionflag = 1;
 	currentMsgId = NULL;
@@ -59,10 +60,11 @@ void UdsRegClient::processRegistration(string* msg)
 
 	try
 	{
-		json->parse(msg);
-		currentMsgId = json->tryTogetId();
+		globalDom = new Document();
+		json->parse(globalDom, msg);
+		currentMsgId = json->tryTogetId(globalDom);
 
-		if(json->isError())
+		if(json->isError(globalDom))
 			throw Error(-1102, "Received json rpc error response.");
 
 		switch(state)
@@ -147,7 +149,7 @@ bool UdsRegClient::handleAnnounceACKMsg(string* msg)
 
 	try
 	{
-		resultValue = json->tryTogetResult();
+		resultValue = json->tryTogetResult(globalDom);
 		if(resultValue->IsString())
 		{
 			resultString = resultValue->GetString();
@@ -206,7 +208,7 @@ bool UdsRegClient::handleRegisterACKMsg(string* msg)
 
 	try
 	{
-		resultValue = json->tryTogetResult();
+		resultValue = json->tryTogetResult(globalDom);
 		if(resultValue->IsString())
 		{
 			resultString = resultValue->GetString();

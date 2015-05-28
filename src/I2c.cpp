@@ -34,18 +34,19 @@ void I2c::processMsg(string* msg)
 
 	try
 	{
-		msgList = json->splitMsg(msg);
+		globalDom = new Document();
+		msgList = json->splitMsg(globalDom, msg);
 		currentMsg = msgList->begin();
 
 		while(currentMsg != msgList->end())
 		{
-			json->parse(*currentMsg);
-			if(json->isRequest())
+			json->parse(globalDom, *currentMsg);
+			if(json->isRequest(globalDom))
 			{
 				setRequestInProcess();
-				requestMethod = json->tryTogetMethod();
-				params = json->tryTogetParams();
-				requestId = json->getId();
+				requestMethod = json->tryTogetMethod(globalDom);
+				params = json->tryTogetParams(globalDom);
+				requestId = json->getId(globalDom);
 				subRequestId = requestId->GetInt();
 				executeFunction(*requestMethod, *params, result);
 				udsWorker->transmit(response, strlen(response));
@@ -53,7 +54,7 @@ void I2c::processMsg(string* msg)
 				currentMsg = msgList->erase(currentMsg);
 				setRequestNotInProcess();
 			}
-			else if(json->isNotification())
+			else if(json->isNotification(globalDom))
 			{
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
@@ -97,14 +98,14 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 
 	Value* i2cDeviceValue = NULL;
 	Value* i2cUniqueIdValue = NULL;
-	Document* dom = json->getRequestDOM();
+	Document* requestDom = json->getRequestDOM();
+	Document* localDom = new Document();
 
-
-	method.SetString(_aa_find_devices_ext._name, dom->GetAllocator());
+	method.SetString(_aa_find_devices_ext._name, requestDom->GetAllocator());
 	params.SetObject();
 
-	currentParam.SetString(_aa_find_devices_ext.paramArray[0]._name, dom->GetAllocator());
-	params.AddMember( currentParam, 256, dom->GetAllocator());
+	currentParam.SetString(_aa_find_devices_ext.paramArray[0]._name, requestDom->GetAllocator());
+	params.AddMember( currentParam, 256, requestDom->GetAllocator());
 
 	//subrequest
 	subRequest = json->generateRequest(method, params, *requestId);
@@ -113,9 +114,9 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 	//###########
 
 
-	json->parse(subResponse);
-	requestId = json->getId();
-	subResult = json->tryTogetResult();
+	json->parse(localDom, subResponse);
+	requestId = json->getId(localDom);
+	subResult = json->tryTogetResult(localDom);
 	if(subResult->IsObject())
 	{
 		i2cDeviceValue = &(*subResult)["devices"];
@@ -126,16 +127,17 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 		for(int i = 0; i < num_devices; i++)
 		{
 			deviceList.push_back(new I2cDevice("Aardvark", (*i2cDeviceValue)[i].GetInt(), (*i2cUniqueIdValue)[i].GetUint()));
-			currentParam.PushBack((*i2cUniqueIdValue)[i].GetUint(), dom->GetAllocator());
+			currentParam.PushBack((*i2cUniqueIdValue)[i].GetUint(), requestDom->GetAllocator());
 		}
 	}
 
 	result.SetObject();
-	result.AddMember("Aardvark", currentParam, dom->GetAllocator());
+	result.AddMember("Aardvark", currentParam, requestDom->GetAllocator());
 
 
 	response = json->generateResponse(*requestId, result);
 
+	delete localDom;
 	return true;
 }
 
@@ -159,7 +161,7 @@ bool I2c::write(Value &params, Value &result)
 		result.SetObject();
 		result.AddMember("returnCode", "OK", dom.GetAllocator());
 
-		response = json->generateResponse(*(json->getId()), result);
+		response = json->generateResponse(*(json->getId(globalDom)), result);
 
 	}
 	catch(Error &e)
@@ -203,7 +205,7 @@ void I2c::aa_open(Value &params)
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
 	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
-	json->parse(subResponse, localDom);
+	json->parse(localDom, subResponse);
 
 	if(checkSubResult(localDom))
 	{
@@ -260,7 +262,7 @@ void I2c::aa_target_power(Value &params)
 	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
 
-	json->parse(subResponse, localDom);
+	json->parse(localDom, subResponse);
 	subResult = json->tryTogetResult(localDom);
 
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
@@ -317,7 +319,7 @@ void I2c::aa_write(Value &params)
 	subResponse = waitForResponse();
 
 
-	json->parse(subResponse, localDom);
+	json->parse(localDom, subResponse);
 	subResult = json->tryTogetResult(localDom);
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
 
@@ -363,7 +365,7 @@ void I2c::aa_close(Value &params)
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
 	udsWorker->transmit(subRequest, strlen(subRequest));
 	subResponse = waitForResponse();
-	json->parse(subResponse, localDom);
+	json->parse(localDom, subResponse);
 
 	subResult = json->tryTogetResult(localDom);
 
