@@ -10,8 +10,9 @@
 
 
 #include "UdsServer.hpp"
-#include "UdsRegClient.hpp"
+#include "RegClient.hpp"
 
+class RegClient;
 
 class I2cPlugin {
 
@@ -31,7 +32,7 @@ class I2cPlugin {
 		void deleteFuncList();
 
 		UdsServer* comServer;
-		UdsRegClient* regClient;
+		RegClient* regClient;
 		bool pluginActive;
 		sigset_t sigmask;
 		sigset_t origmask;

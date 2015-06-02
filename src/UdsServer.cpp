@@ -1,20 +1,11 @@
 #include <UdsServer.hpp>
 #include "JsonRPC.hpp"
-#include "UdsComWorker.hpp"
 
-
-int UdsServer::connection_socket;
-list<UdsComWorker*> UdsServer::workerList;
-pthread_mutex_t UdsServer::wLmutex;
-struct sockaddr_un UdsServer::address;
-socklen_t UdsServer::addrlen;
-bool UdsServer::ready;
 
 
 UdsServer::UdsServer( const char* udsFile, int nameSize)
 {
 	optionflag = 1;
-	ready = false;
 	connection_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	address.sun_family = AF_UNIX;
 	strncpy(address.sun_path, udsFile, nameSize);
@@ -26,58 +17,68 @@ UdsServer::UdsServer( const char* udsFile, int nameSize)
 	setsockopt(connection_socket, SOL_SOCKET, SO_REUSEADDR, &optionflag, sizeof(optionflag));
 	bind(connection_socket, (struct sockaddr*)&address, addrlen);
 
-	pthread_create(&accepter, NULL, uds_accept, NULL);
-	while(!isReady()){}
+
+	StartAcceptThread();
+
+	if(wait_for_accepter_up() != 0)
+		throw Error("Creation of Listener/worker threads failed.");
+
 }
 
 
 UdsServer::~UdsServer()
 {
-	pthread_cancel(accepter);
-	pthread_join(accepter, NULL);
-	deleteWorkerList();
+	pthread_t accepter = getAccepter();
+	if(accepter != 0)
+		pthread_cancel(accepter);
+
+	WaitForAcceptThreadToExit();
+
+	deleteComPointList();
+	close(connection_socket);
 	pthread_mutex_destroy(&wLmutex);
 }
 
 
-void* UdsServer::uds_accept(void* param)
+void UdsServer::thread_accept()
 {
 	int new_socket = 0;
-	UdsComWorker* worker = NULL;
+	ComPoint* comPoint = NULL;
+	I2c* i2c = NULL;
 	listen(connection_socket, MAX_CLIENTS);
 
-	printf("Accepter created\n");
+	//dyn_print("Accepter created\n");
 	while(true)
 	{
-		ready = true;
 		new_socket = accept(connection_socket, (struct sockaddr*)&address, &addrlen);
 		if(new_socket > 0)
 		{
-			worker = new UdsComWorker(new_socket);
-			pushWorkerList(worker);
+			i2c = new I2c();
+			comPoint = new ComPoint(new_socket, i2c, 1); //TODO: enter plugin id instead of just 1
+			//dyn_print("Uds---> sNew UdsWorker with socket: %d \n", new_socket);
+			pushComPointList(comPoint);
 		}
 	}
-	return 0;
 }
 
 
-void UdsServer::deleteWorkerList()
+void UdsServer::deleteComPointList()
 {
-	list<UdsComWorker*>::iterator worker= workerList.begin();
+	list<ComPoint*>::iterator worker= comPointList.begin();
 
-	while(worker != workerList.end())
+	while(worker != comPointList.end())
 	{
 		delete *worker;
-		worker = workerList.erase(worker);
+		worker = comPointList.erase(worker);
 	}
 }
 
 
-void UdsServer::pushWorkerList(UdsComWorker* newWorker)
+void UdsServer::pushComPointList(ComPoint* comPoint)
 {
 	pthread_mutex_lock(&wLmutex);
-	workerList.push_back(newWorker);
-	printf("New UdsWorker : %lu \n", workerList.size());
+	comPointList.push_back(comPoint);
+	//dyn_print("Uds---> Number of UdsWorker: %d \n", comPointList.size());
 	pthread_mutex_unlock(&wLmutex);
 }
 
@@ -86,14 +87,14 @@ void UdsServer::checkForDeletableWorker()
 {
 	pthread_mutex_lock(&wLmutex);
 
-	list<UdsComWorker*>::iterator i = workerList.begin();
-	while(i != workerList.end())
+	list<ComPoint*>::iterator i = comPointList.begin();
+	while(i != comPointList.end())
 	{
 		if((*i)->isDeletable())
 		{
+			//dyn_print("Uds---> Deleting UdsWorker. %d still left.\n", comPointList.size()-1);
 			delete *i;
-			i = workerList.erase(i);
-			printf("UdsWorker deleted from list, %lu  left.\n", workerList.size());
+			i = comPointList.erase(i);
 		}
 		else
 			++i;

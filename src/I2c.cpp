@@ -3,7 +3,6 @@
 #include "signal.h"
 
 
-#include "UdsComWorker.hpp"
 #include <I2c.hpp>
 #include "I2cDevice.hpp"
 #include "RemoteAardvark.hpp"
@@ -11,7 +10,6 @@
 
 
 list<I2cDevice*> I2c::deviceList;
-
 
 
 
@@ -26,16 +24,17 @@ void I2c::deleteMsgList()
 }
 
 
-void I2c::processMsg(string* msg)
+void I2c::process(RPCMsg* msg)
 {
 	Value result;
-	Value* params;
+	Value* params = NULL;
 	list<string*>::iterator currentMsg;
 
 	try
 	{
+		msgList = NULL;
 		globalDom = new Document();
-		msgList = json->splitMsg(globalDom, msg);
+		msgList = json->splitMsg(globalDom, msg->getContent());
 		currentMsg = msgList->begin();
 
 		while(currentMsg != msgList->end())
@@ -43,16 +42,16 @@ void I2c::processMsg(string* msg)
 			json->parse(globalDom, *currentMsg);
 			if(json->isRequest(globalDom))
 			{
-				setRequestInProcess();
+				setBusy(true);
 				requestMethod = json->tryTogetMethod(globalDom);
 				params = json->tryTogetParams(globalDom);
 				requestId = json->getId(globalDom);
 				subRequestId = requestId->GetInt();
 				executeFunction(*requestMethod, *params, result);
-				udsWorker->transmit(response, strlen(response));
+				workerInterface->transmit(response, strlen(response));
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
-				setRequestNotInProcess();
+				setBusy(false);
 			}
 			else if(json->isNotification(globalDom))
 			{
@@ -60,13 +59,14 @@ void I2c::processMsg(string* msg)
 				currentMsg = msgList->erase(currentMsg);
 			}
 		}
+
 	}
 	catch(Error &e)
 	{
-		udsWorker->transmit(e.get(), strlen(e.get()));
+		workerInterface->transmit(e.get(), strlen(e.get()));
 		delete *currentMsg;
 		currentMsg = msgList->erase(currentMsg);
-		setRequestNotInProcess();
+		setBusy(false);
 	}
 	deleteMsgList();
 }
@@ -109,12 +109,11 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 
 	//subrequest
 	subRequest = json->generateRequest(method, params, *requestId);
-	udsWorker->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse();
+	workerInterface->transmit(subRequest, strlen(subRequest));
+    waitForResponse(localDom);
 	//###########
 
 
-	json->parse(localDom, subResponse);
 	requestId = json->getId(localDom);
 	subResult = json->tryTogetResult(localDom);
 	if(subResult->IsObject())
@@ -203,9 +202,9 @@ void I2c::aa_open(Value &params)
 	subRequest = json->generateRequest(method, localParams, id);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	udsWorker->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse();
-	json->parse(localDom, subResponse);
+	workerInterface->transmit(subRequest, strlen(subRequest));
+	subResponse = waitForResponse(localDom);
+
 
 	if(checkSubResult(localDom))
 	{
@@ -259,10 +258,10 @@ void I2c::aa_target_power(Value &params)
 	id.SetInt(++subRequestId);
 	subRequest = json->generateRequest(method, localParams, id);
 
-	udsWorker->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse();
+	workerInterface->transmit(subRequest, strlen(subRequest));
+	subResponse = waitForResponse(localDom);
 
-	json->parse(localDom, subResponse);
+
 	subResult = json->tryTogetResult(localDom);
 
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
@@ -315,11 +314,10 @@ void I2c::aa_write(Value &params)
 	id.SetInt(++subRequestId);
 	subRequest = json->generateRequest(method, localParams, id);
 
-	udsWorker->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse();
+	workerInterface->transmit(subRequest, strlen(subRequest));
+	subResponse = waitForResponse(localDom);
 
 
-	json->parse(localDom, subResponse);
 	subResult = json->tryTogetResult(localDom);
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
 
@@ -363,9 +361,9 @@ void I2c::aa_close(Value &params)
 	subRequest = json->generateRequest(method, localParams, id);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	udsWorker->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse();
-	json->parse(localDom, subResponse);
+	workerInterface->transmit(subRequest, strlen(subRequest));
+	waitForResponse(localDom);
+
 
 	subResult = json->tryTogetResult(localDom);
 
@@ -420,40 +418,37 @@ bool I2c::checkSubResult(Document* dom)
 }
 
 
-string* I2c::waitForResponse()
+string* I2c::waitForResponse(Document* localDom)
 {
 	int retCode = 0;
-	retCode = sigtimedwait(&set, NULL, &timeout);
-	if(retCode < 0)
-		throw Error("Timeout waiting for subResponse.\n");
+	bool noTimeout = true;
+	time_t startTime = time(NULL);
+	time_t pauseTime;
 
-	subResponse = udsWorker->getNextMsg();
-	printf("SubResponse: %s\n", subResponse->c_str());
-	return subResponse;
+	while(noTimeout)
+	{
+		retCode = sigtimedwait(&set, NULL, &timeout);
+		if(retCode < 0)
+			noTimeout = false;
+
+		pauseTime = time(NULL);
+
+		json->parse(localDom, subMsg->getContent());
+
+		//TODO: check id of this json rpc and the current main request
+		if(json->isResponse(localDom))
+		{
+			timeout.tv_sec = 3;
+			printf("SubResponse: %s\n", subMsg->getContent()->c_str());
+			return subMsg->getContent();
+		}
+		else
+		{
+			workerInterface->push_frontReceiveQueue(subMsg);
+			timeout.tv_sec = difftime(startTime, pauseTime);
+		}
+	}
+	timeout.tv_sec = 3;
+	throw Error("Timeout waiting for subResponse.\n");
 }
 
-
-bool I2c::isRequestInProcess()
-{
-	bool result = false;
-	pthread_mutex_lock(&rIPMutex);
-	result = requestInProcess;
-	pthread_mutex_unlock(&rIPMutex);
-	return result;
-}
-
-
-void I2c::setRequestInProcess()
-{
-	pthread_mutex_lock(&rIPMutex);
-	requestInProcess = true;
-	pthread_mutex_unlock(&rIPMutex);
-}
-
-
-void I2c::setRequestNotInProcess()
-{
-	pthread_mutex_lock(&rIPMutex);
-	requestInProcess = false;
-	pthread_mutex_unlock(&rIPMutex);
-}

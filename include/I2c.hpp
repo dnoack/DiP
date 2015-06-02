@@ -13,45 +13,46 @@
 #define SUBRESPONSE_TIMEOUT 5
 
 #include <pthread.h>
+#include <ctime>
 
 #include "document.h"
 #include "writer.h"
 
 #include "DriverInterface.h"
+#include "WorkerThreads.hpp"
+#include "ProcessInterface.hpp"
 #include "JsonRPC.hpp"
 #include "I2cDevice.hpp"
+#include "RPCMsg.hpp"
 
 
 
 using namespace rapidjson;
 
 class I2c;
-class UdsComWorker;
+
 
 typedef bool (I2c::*i2cfptr)(Value&, Value&);
 
 
-class I2c : public DriverInterface<I2c*, i2cfptr>
+class I2c : public ProcessInterface, public DriverInterface<I2c*, i2cfptr>
 {
 	public:
 
 
-		I2c(UdsComWorker* udsWorker) : DriverInterface<I2c*, i2cfptr>(this)
+		I2c() : DriverInterface<I2c*, i2cfptr>(this)
 		{
-			pthread_mutex_init(&rIPMutex, NULL);
 			i2cfptr fptr;
 
-			this-> udsWorker = udsWorker;
-			this->subResponse = NULL;
-			this->subRequest = NULL;
-			this->requestMethod = NULL;
-			this->subResult = NULL;
-			this->requestId = NULL;
-			this->response = NULL;
-			this->msgList = NULL;
-			this->subRequestId = 0;
-			this->json = new JsonRPC();
-			requestInProcess = false;
+			subResponse = NULL;
+			subRequest = NULL;
+			requestMethod = NULL;
+			subResult = NULL;
+			requestId = NULL;
+		    response = NULL;
+			msgList = NULL;
+			subRequestId = 0;
+			json = new JsonRPC();
 			globalDom = NULL;
 
 			//configure signal SIGUSR2 and timeout for receiving subresponses
@@ -59,7 +60,6 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 			sigaddset(&set, SIGUSR2);
 			timeout.tv_sec = SUBRESPONSE_TIMEOUT;
 			timeout.tv_nsec = 0;
-
 
 
 			fptr = &I2c::write;
@@ -74,7 +74,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		~I2c()
 		{
 			delete json;
-			pthread_mutex_destroy(&rIPMutex);
+
 		};
 
 
@@ -87,7 +87,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		 * - A incorrect message will result into a thrown exception and sending a error response (json rpc) back.
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
-		void processMsg(string* msg);
+		void process(RPCMsg* msg);
 
 		bool isRequestInProcess();
 
@@ -112,8 +112,6 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		Document* globalDom;
 		Document dom;
 		Value* requestMethod;
-		pthread_mutex_t rIPMutex;
-		bool requestInProcess;
 
 		/*! The json rpc id value of the current processing main request (received from RSD).*/
 		Value* requestId;
@@ -122,8 +120,7 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 
 		Value* subResult;
 
-		/*Corresponding Unix-Domain-Socket Communication modul.*/
-		UdsComWorker* udsWorker;
+
 		/*Contains a list of (hopefully) json rpc requests or notifications.*/
 		list<string*>* msgList;
 
@@ -145,21 +142,11 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		void aa_close(Value &params);
 
 		bool checkSubResult(Document* dom);
-		string* waitForResponse();
+		string* waitForResponse(Document* localDom);
 
 		void deleteMsgList();
 
 		int getPortByUniqueId(unsigned int);
-
-
-
-
-
-		void setRequestInProcess();
-
-		void setRequestNotInProcess();
-
-
 
 };
 

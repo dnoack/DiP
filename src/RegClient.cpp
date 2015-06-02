@@ -1,15 +1,15 @@
-#include "UdsRegClient.hpp"
+#include "RegClient.hpp"
 
 
-struct sockaddr_un UdsRegClient::address;
-socklen_t UdsRegClient::addrlen;
+struct sockaddr_un RegClient::address;
+socklen_t RegClient::addrlen;
 
 
-UdsRegClient::UdsRegClient(const char* pluginName, int pluginNumber, const char* regPath, const char* comPath)
+RegClient::RegClient(const char* pluginName, int pluginNumber, const char* regPath, const char* comPath)
 {
 	this->regPath = regPath;
-	globalDom = NULL;
-	regWorker = NULL;
+	dom = NULL;
+	workerInterface = NULL;
 	optionflag = 1;
 	currentMsgId = NULL;
 	state = NOT_ACTIVE;
@@ -28,43 +28,43 @@ UdsRegClient::UdsRegClient(const char* pluginName, int pluginNumber, const char*
 }
 
 
-UdsRegClient::~UdsRegClient()
+RegClient::~RegClient()
 {
-	if(regWorker != NULL)
-		delete regWorker;
+	if(workerInterface != NULL)
+		delete workerInterface;
 
 	delete plugin;
 	delete json;
 }
 
 
-void UdsRegClient::connectToRSD()
+void RegClient::connectToRSD()
 {
 	if( connect(connection_socket, (struct sockaddr*)&address, addrlen) != 0 )
 		throw Error(-1101, "Could not connect to RSD.\n");
 	else
-		regWorker = new UdsRegWorker(this, connection_socket);
+		workerInterface = new ComPoint(connection_socket, this, plugin->getPluginNumber());
 }
 
 
-void UdsRegClient::unregisterFromRSD()
+void RegClient::unregisterFromRSD()
 {
 	//TODO: send a json rpc which tells the RSD that the plugin is going to shutdown
 }
 
 
-void UdsRegClient::processRegistration(string* msg)
+void RegClient::process(RPCMsg* msg)
 {
 
 	const char* response = NULL;
 
 	try
 	{
-		globalDom = new Document();
-		json->parse(globalDom, msg);
-		currentMsgId = json->tryTogetId(globalDom);
+		dom = new Document();
+		json->parse(dom, msg->getContent());
+		currentMsgId = json->tryTogetId(dom);
 
-		if(json->isError(globalDom))
+		if(json->isError(dom))
 			throw Error(-1102, "Received json rpc error response.");
 
 		switch(state)
@@ -72,21 +72,21 @@ void UdsRegClient::processRegistration(string* msg)
 			case NOT_ACTIVE:
 				//check for announce ack then switch state to announced
 				//and send register msg
-				if(handleAnnounceACKMsg(msg))
+				if(handleAnnounceACKMsg())
 				{
 					state = ANNOUNCED;
 					response = createRegisterMsg();
-					regWorker->transmit(response, strlen(response));
+					workerInterface->transmit(response, strlen(response));
 				}
 				break;
 			case ANNOUNCED:
-				if(handleRegisterACKMsg(msg))
+				if(handleRegisterACKMsg())
 				{
 					state = REGISTERED;
 					//TODO: check if Plugin com part is ready, if yes -> state = active
 					//create pluginActive msg
 					response = createPluginActiveMsg();
-					regWorker->transmit(response, strlen(response));
+					workerInterface->transmit(response, strlen(response));
 				}
 				//check for register ack then switch state to active
 				break;
@@ -113,7 +113,7 @@ void UdsRegClient::processRegistration(string* msg)
 }
 
 
-void UdsRegClient::sendAnnounceMsg()
+void RegClient::sendAnnounceMsg()
 {
 	Value method;
 	Value params;
@@ -131,7 +131,7 @@ void UdsRegClient::sendAnnounceMsg()
 		id.SetInt(1);
 
 		announceMsg = json->generateRequest(method, params, id);
-		regWorker->transmit(announceMsg, strlen(announceMsg));
+		workerInterface->transmit(announceMsg, strlen(announceMsg));
 	}
 	catch(Error &e)
 	{
@@ -141,7 +141,7 @@ void UdsRegClient::sendAnnounceMsg()
 
 
 
-bool UdsRegClient::handleAnnounceACKMsg(string* msg)
+bool RegClient::handleAnnounceACKMsg()
 {
 	Value* resultValue = NULL;
 	const char* resultString = NULL;
@@ -149,7 +149,7 @@ bool UdsRegClient::handleAnnounceACKMsg(string* msg)
 
 	try
 	{
-		resultValue = json->tryTogetResult(globalDom);
+		resultValue = json->tryTogetResult(dom);
 		if(resultValue->IsString())
 		{
 			resultString = resultValue->GetString();
@@ -169,7 +169,7 @@ bool UdsRegClient::handleAnnounceACKMsg(string* msg)
 }
 
 
-const char* UdsRegClient::createRegisterMsg()
+const char* RegClient::createRegisterMsg()
 {
 	Document dom;
 	Value method;
@@ -200,7 +200,7 @@ const char* UdsRegClient::createRegisterMsg()
 }
 
 
-bool UdsRegClient::handleRegisterACKMsg(string* msg)
+bool RegClient::handleRegisterACKMsg()
 {
 	const char* resultString = NULL;
 	Value* resultValue = NULL;
@@ -208,7 +208,7 @@ bool UdsRegClient::handleRegisterACKMsg(string* msg)
 
 	try
 	{
-		resultValue = json->tryTogetResult(globalDom);
+		resultValue = json->tryTogetResult(dom);
 		if(resultValue->IsString())
 		{
 			resultString = resultValue->GetString();
@@ -228,7 +228,7 @@ bool UdsRegClient::handleRegisterACKMsg(string* msg)
 }
 
 
-const char* UdsRegClient::createPluginActiveMsg()
+const char* RegClient::createPluginActiveMsg()
 {
 	Value method;
 	Value* params = NULL;

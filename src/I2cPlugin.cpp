@@ -15,11 +15,11 @@ I2cPlugin::I2cPlugin()
 	sigaddset(&sigmask, SIGUSR2);
 	pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
 	//get List of key, which are supported by the driver
-	I2c* tempDriver = new I2c(NULL);
+	I2c* tempDriver = new I2c();
 	funcList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 
-	regClient = new UdsRegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, COM_PATH);
+	regClient = new RegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, COM_PATH);
 	comServer = new UdsServer(COM_PATH, sizeof(COM_PATH));
 }
 
