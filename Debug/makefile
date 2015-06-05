@@ -44,7 +44,7 @@ all: DiP
 DiP: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++  -o "DiP" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"/home/dave2/git/rpcUtils/Debug" -o "DiP" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

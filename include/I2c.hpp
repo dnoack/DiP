@@ -45,6 +45,7 @@ class I2c : public ProcessInterface, public DriverInterface<I2c*, i2cfptr>
 			i2cfptr fptr;
 
 			subResponse = NULL;
+			error = NULL;
 			subRequest = NULL;
 			requestMethod = NULL;
 			subResult = NULL;
@@ -107,6 +108,8 @@ class I2c : public ProcessInterface, public DriverInterface<I2c*, i2cfptr>
 		const char* subRequest;
 		/*! Response from another plugin. */
 		string* subResponse;
+		//for generating json rpc error responses
+		const char* error;
 
 		JsonRPC* json;
 		Document* globalDom;

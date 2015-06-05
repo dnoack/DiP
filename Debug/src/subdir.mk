@@ -7,27 +7,21 @@ CPP_SRCS += \
 ../src/I2c.cpp \
 ../src/I2cPlugin.cpp \
 ../src/JsonRPC.cpp \
-../src/UdsComWorker.cpp \
-../src/UdsRegClient.cpp \
-../src/UdsRegWorker.cpp \
+../src/RegClient.cpp \
 ../src/UdsServer.cpp 
 
 OBJS += \
 ./src/I2c.o \
 ./src/I2cPlugin.o \
 ./src/JsonRPC.o \
-./src/UdsComWorker.o \
-./src/UdsRegClient.o \
-./src/UdsRegWorker.o \
+./src/RegClient.o \
 ./src/UdsServer.o 
 
 CPP_DEPS += \
 ./src/I2c.d \
 ./src/I2cPlugin.d \
 ./src/JsonRPC.d \
-./src/UdsComWorker.d \
-./src/UdsRegClient.d \
-./src/UdsRegWorker.d \
+./src/RegClient.d \
 ./src/UdsServer.d 
 
 
@@ -35,7 +29,7 @@ CPP_DEPS += \
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/home/Dave/libs/rapidjson/include/rapidjson -I"/home/Dave/git/I2C-Plugin/include" -I"/home/Dave/git/RSD-and-Plugin-lib/include" -I/home/dnoack/libs/rapidjson/include/rapidjson -O0 -g3 -Wall -c -fmessage-length=0 ${CFLAGS} -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I"/home/dave2/git/rpcUtils/include" -I/home/dave2/git/rapidjson/include/rapidjson -I"/home/dave2/git/I2C-Plugin/include" -O0 -g3 -Wall -c -fmessage-length=0 ${CFLAGS} -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

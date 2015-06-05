@@ -63,7 +63,8 @@ void I2c::process(RPCMsg* msg)
 	}
 	catch(Error &e)
 	{
-		workerInterface->transmit(e.get(), strlen(e.get()));
+		error = json->generateResponseError(*requestId, e.getErrorCode(), e.get());
+		workerInterface->transmit(error, strlen(error));
 		delete *currentMsg;
 		currentMsg = msgList->erase(currentMsg);
 		setBusy(false);
@@ -429,26 +430,30 @@ string* I2c::waitForResponse(Document* localDom)
 	{
 		retCode = sigtimedwait(&set, NULL, &timeout);
 		if(retCode < 0)
-			noTimeout = false;
-
-		pauseTime = time(NULL);
-
-		json->parse(localDom, subMsg->getContent());
-
-		//TODO: check id of this json rpc and the current main request
-		if(json->isResponse(localDom))
 		{
-			timeout.tv_sec = 3;
-			printf("SubResponse: %s\n", subMsg->getContent()->c_str());
-			return subMsg->getContent();
+			noTimeout = false;
 		}
 		else
 		{
-			workerInterface->push_frontReceiveQueue(subMsg);
-			timeout.tv_sec = difftime(startTime, pauseTime);
+			pauseTime = time(NULL);
+
+			json->parse(localDom, subMsg->getContent());
+
+			//TODO: check id of this json rpc and the current main request
+			if(json->isResponse(localDom))
+			{
+				timeout.tv_sec = 3;
+				printf("SubResponse: %s\n", subMsg->getContent()->c_str());
+				return subMsg->getContent();
+			}
+			else
+			{
+				workerInterface->push_frontReceiveQueue(subMsg);
+				timeout.tv_sec = difftime(startTime, pauseTime);
+			}
 		}
 	}
 	timeout.tv_sec = 3;
-	throw Error("Timeout waiting for subResponse.\n");
+	throw Error("Timeout waiting for subResponse.");
 }
 
