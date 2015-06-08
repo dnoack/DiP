@@ -1,6 +1,7 @@
 
 #include "unistd.h"
 #include "signal.h"
+#include "errno.h"
 
 
 #include <I2c.hpp>
@@ -70,6 +71,12 @@ void I2c::process(RPCMsg* msg)
 		setBusy(false);
 	}
 	deleteMsgList();
+}
+
+
+void I2c::isSubResponse(RPCMsg* rpcMsg)
+{
+
 }
 
 
@@ -423,8 +430,6 @@ string* I2c::waitForResponse(Document* localDom)
 {
 	int retCode = 0;
 	bool noTimeout = true;
-	time_t startTime = time(NULL);
-	time_t pauseTime;
 
 	while(noTimeout)
 	{
@@ -432,28 +437,15 @@ string* I2c::waitForResponse(Document* localDom)
 		if(retCode < 0)
 		{
 			noTimeout = false;
+			printf("timeout ? : %s", strerror(errno));
 		}
 		else
 		{
-			pauseTime = time(NULL);
-
 			json->parse(localDom, subMsg->getContent());
-
-			//TODO: check id of this json rpc and the current main request
-			if(json->isResponse(localDom))
-			{
-				timeout.tv_sec = 3;
-				printf("SubResponse: %s\n", subMsg->getContent()->c_str());
-				return subMsg->getContent();
-			}
-			else
-			{
-				workerInterface->push_frontReceiveQueue(subMsg);
-				timeout.tv_sec = difftime(startTime, pauseTime);
-			}
+			printf("SubResponse: %s\n", subMsg->getContent()->c_str());
+			return subMsg->getContent();
 		}
 	}
-	timeout.tv_sec = 3;
 	throw Error("Timeout waiting for subResponse.");
 }
 

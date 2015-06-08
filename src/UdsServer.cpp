@@ -43,7 +43,7 @@ UdsServer::~UdsServer()
 void UdsServer::thread_accept()
 {
 	int new_socket = 0;
-	ComPoint* comPoint = NULL;
+	ComPointB* comPoint = NULL;
 	I2c* i2c = NULL;
 	listen(connection_socket, MAX_CLIENTS);
 
@@ -54,7 +54,7 @@ void UdsServer::thread_accept()
 		if(new_socket > 0)
 		{
 			i2c = new I2c();
-			comPoint = new ComPoint(new_socket, i2c, 1); //TODO: enter plugin id instead of just 1
+			comPoint = new ComPointB(new_socket, i2c, 1); //TODO: enter plugin id instead of just 1
 			//dyn_print("Uds---> sNew UdsWorker with socket: %d \n", new_socket);
 			pushComPointList(comPoint);
 		}
@@ -64,7 +64,7 @@ void UdsServer::thread_accept()
 
 void UdsServer::deleteComPointList()
 {
-	list<ComPoint*>::iterator worker= comPointList.begin();
+	list<ComPointB*>::iterator worker= comPointList.begin();
 
 	while(worker != comPointList.end())
 	{
@@ -74,7 +74,7 @@ void UdsServer::deleteComPointList()
 }
 
 
-void UdsServer::pushComPointList(ComPoint* comPoint)
+void UdsServer::pushComPointList(ComPointB* comPoint)
 {
 	pthread_mutex_lock(&wLmutex);
 	comPointList.push_back(comPoint);
@@ -87,7 +87,7 @@ void UdsServer::checkForDeletableWorker()
 {
 	pthread_mutex_lock(&wLmutex);
 
-	list<ComPoint*>::iterator i = comPointList.begin();
+	list<ComPointB*>::iterator i = comPointList.begin();
 	while(i != comPointList.end())
 	{
 		if((*i)->isDeletable())

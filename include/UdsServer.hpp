@@ -13,13 +13,12 @@
 #include "signal.h"
 
 #include "AcceptThread.hpp"
-#include "ComPoint.hpp"
+#include "ComPointB.hpp"
 #include "I2c.hpp"
 #include "JsonRPC.hpp"
 
 #define MAX_CLIENTS 20
 
-class UdsComWorker;
 
 
 class UdsServer : public AcceptThread{
@@ -37,13 +36,13 @@ class UdsServer : public AcceptThread{
 
 		 int connection_socket;
 
-		list<ComPoint*> comPointList;
+		list<ComPointB*> comPointList;
 		pthread_mutex_t wLmutex;
 
 		struct sockaddr_un address;
 		socklen_t addrlen;
 
-		void pushComPointList(ComPoint* newWorker);
+		void pushComPointList(ComPointB* newWorker);
 		void deleteComPointList();
 
 

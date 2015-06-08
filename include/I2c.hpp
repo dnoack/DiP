@@ -10,7 +10,7 @@
 #define I2C_H_
 
 /*! Timeout in seconds for waiting for a subresponse*/
-#define SUBRESPONSE_TIMEOUT 5
+#define SUBRESPONSE_TIMEOUT 180
 
 #include <pthread.h>
 #include <ctime>
@@ -20,7 +20,7 @@
 
 #include "DriverInterface.h"
 #include "WorkerThreads.hpp"
-#include "ProcessInterface.hpp"
+#include "ProcessInterfaceB.hpp"
 #include "JsonRPC.hpp"
 #include "I2cDevice.hpp"
 #include "RPCMsg.hpp"
@@ -35,7 +35,7 @@ class I2c;
 typedef bool (I2c::*i2cfptr)(Value&, Value&);
 
 
-class I2c : public ProcessInterface, public DriverInterface<I2c*, i2cfptr>
+class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 {
 	public:
 
@@ -89,6 +89,7 @@ class I2c : public ProcessInterface, public DriverInterface<I2c*, i2cfptr>
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
 		void process(RPCMsg* msg);
+		void isSubResponse(RPCMsg* rpcMsg);
 
 		bool isRequestInProcess();
 
