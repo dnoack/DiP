@@ -7,6 +7,7 @@
 #include <I2c.hpp>
 #include "I2cDevice.hpp"
 #include "RemoteAardvark.hpp"
+#include "allocators.h"
 
 
 
@@ -34,27 +35,25 @@ void I2c::process(RPCMsg* msg)
 	try
 	{
 		msgList = NULL;
-		globalDom = new Document();
-		msgList = json->splitMsg(globalDom, msg->getContent());
+		msgList = json->splitMsg(mainRequestDom, msg->getContent());
 		currentMsg = msgList->begin();
 
 		while(currentMsg != msgList->end())
 		{
-			json->parse(globalDom, *currentMsg);
-			if(json->isRequest(globalDom))
+			json->parse(mainRequestDom, *currentMsg);
+			if(json->isRequest(mainRequestDom))
 			{
 				setBusy(true);
-				requestMethod = json->tryTogetMethod(globalDom);
-				params = json->tryTogetParams(globalDom);
-				requestId = json->getId(globalDom);
-				subRequestId = requestId->GetInt();
+				requestMethod = json->tryTogetMethod(mainRequestDom);
+				params = json->tryTogetParams(mainRequestDom);
+				requestId = json->getId(mainRequestDom);
 				executeFunction(*requestMethod, *params, result);
-				workerInterface->transmit(response, strlen(response));
+				workerInterface->transmit(mainResponse, strlen(mainResponse));
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
 				setBusy(false);
 			}
-			else if(json->isNotification(globalDom))
+			else if(json->isNotification(mainRequestDom))
 			{
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
@@ -74,9 +73,24 @@ void I2c::process(RPCMsg* msg)
 }
 
 
-void I2c::isSubResponse(RPCMsg* rpcMsg)
+bool I2c::isSubResponse(RPCMsg* rpcMsg)
 {
+	bool result = false;
 
+	try
+	{
+		json->parse(subResponseDom, rpcMsg->getContent());
+		if(json->isResponse(subResponseDom))//TODO: check for correct json rpc id
+			result = true;
+		else
+			result = false;
+	}
+	catch(Error &e)
+	{
+		result = NULL;
+	}
+
+	return result;
 }
 
 
@@ -101,29 +115,26 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 	//generate json rpc for aa_find_devices ext
 	Value method;
 	Value currentParam;
-
-	int num_devices = 0;
-
 	Value* i2cDeviceValue = NULL;
 	Value* i2cUniqueIdValue = NULL;
-	Document* requestDom = json->getRequestDOM();
-	Document* localDom = new Document();
+	int num_devices = 0;
 
+	//get the DOM for generating requests
+	Document* requestDom = json->getRequestDOM();
+
+	//Generate subRequest
 	method.SetString(_aa_find_devices_ext._name, requestDom->GetAllocator());
 	params.SetObject();
-
 	currentParam.SetString(_aa_find_devices_ext.paramArray[0]._name, requestDom->GetAllocator());
 	params.AddMember( currentParam, 256, requestDom->GetAllocator());
 
-	//subrequest
 	subRequest = json->generateRequest(method, params, *requestId);
+
+	//Send subRequest and wait for subResponse
 	workerInterface->transmit(subRequest, strlen(subRequest));
-    waitForResponse(localDom);
-	//###########
+    waitForResponse();
 
-
-	requestId = json->getId(localDom);
-	subResult = json->tryTogetResult(localDom);
+	subResult = json->tryTogetResult(subResponseDom);
 	if(subResult->IsObject())
 	{
 		i2cDeviceValue = &(*subResult)["devices"];
@@ -140,11 +151,7 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 
 	result.SetObject();
 	result.AddMember("Aardvark", currentParam, requestDom->GetAllocator());
-
-
-	response = json->generateResponse(*requestId, result);
-
-	delete localDom;
+	mainResponse = json->generateResponse(*requestId, result);
 	return true;
 }
 
@@ -155,21 +162,20 @@ bool I2c::write(Value &params, Value &result)
 
 	try
 	{
+		rapidjson::MemoryPoolAllocator<> &subRequestAllocator = json->getRequestDOM()->GetAllocator();
+
+		//call subMethods
 		aa_open(params);
-
-		//Add param powerMask for powerUp
-		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, dom.GetAllocator());
+		//param powerMask will be alway the same, but is not send by mainRequest.
+		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, subRequestAllocator);
 		aa_target_power(params);
-
 		aa_write(params);
-
 		aa_close(params);
 
+		//generate mainResponse
 		result.SetObject();
-		result.AddMember("returnCode", "OK", dom.GetAllocator());
-
-		response = json->generateResponse(*(json->getId(globalDom)), result);
-
+		result.AddMember("returnCode", "OK", json->getResponseDOM()->GetAllocator());
+		mainResponse = json->generateResponse(*requestId, result);
 	}
 	catch(Error &e)
 	{
@@ -184,58 +190,41 @@ void I2c::aa_open(Value &params)
 {
 	Value method;
 	Value localParams;
-	Value id;
+	Value tempParam;
 	Value* subResultValue= NULL;
-
 	Value* deviceValue = NULL;
 	int device = 0;
-	Value tempParam;
-	Document* localDom = new Document();
-
 
 
 	//Get exact method name
-	method.SetString(_aa_open._name, dom.GetAllocator());
+	method.SetString(_aa_open._name, subRequestAllocator);
 	//Get all needed params
 	localParams.SetObject();
-	tempParam.SetString(_aa_open.paramArray[0]._name , dom.GetAllocator());
+	tempParam.SetString(_aa_open.paramArray[0]._name , subRequestAllocator);
 	//map "device" -> to "Aardvark"(_aa_open.paramArray[0]._name)
 	deviceValue = findObjectMember(params, "device");
 	device = getPortByUniqueId(deviceValue->GetUint());
-
-	localParams.AddMember(tempParam, device, dom.GetAllocator());
-	//id of this request is the one of the incomming request +1
-	id.SetInt(++subRequestId);
-
-	subRequest = json->generateRequest(method, localParams, id);
+	localParams.AddMember(tempParam, device, subRequestAllocator);
+	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
 	workerInterface->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse(localDom);
+	waitForResponse();
 
-
-	if(checkSubResult(localDom))
+	if(checkSubResult(subResponseDom))
 	{
-		subResult = json->tryTogetResult(localDom);
+		subResult = json->tryTogetResult(subResponseDom);
 		subResultValue = findObjectMember(*subResult, "Aardvark", kNumberType);
 
 		if(subResultValue->GetInt() < 0)
-		{
-			delete localDom;
 			throw Error(subResponse);
-		}
 		else
-		{
-			params.AddMember("Aardvark", subResultValue->GetInt(), dom.GetAllocator());
-			delete localDom;
-		}
+			params.AddMember("Aardvark", subResultValue->GetInt(), subRequestAllocator);
 	}
 	else
 	{
-		delete localDom;
-		throw Error(subResponse);
+		throw Error("todo");
 	}
-
 }
 
 
@@ -244,46 +233,37 @@ void I2c::aa_target_power(Value &params)
 	Value method;
 	Value localParams;
 	Value tempParam;
-	Value id;
 	Value* subResultValue= NULL;
-	Document* localDom = new Document();
 
 	localParams.SetObject();
 	Value* valuePtr = findObjectMember(params, _aa_target_power.paramArray[0]._name);
 
 	//Aardvark handle
-	tempParam.SetString(_aa_target_power.paramArray[0]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
+	tempParam.SetString(_aa_target_power.paramArray[0]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//powerMask
 	valuePtr = findObjectMember(params, _aa_target_power.paramArray[1]._name);
-	tempParam.SetString(_aa_target_power.paramArray[1]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
+	tempParam.SetString(_aa_target_power.paramArray[1]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//methodname
-	method.SetString(_aa_target_power._name, dom.GetAllocator());
+	method.SetString(_aa_target_power._name, subRequestAllocator);
 
-	id.SetInt(++subRequestId);
-	subRequest = json->generateRequest(method, localParams, id);
+	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	workerInterface->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse(localDom);
+	waitForResponse();
 
 
-	subResult = json->tryTogetResult(localDom);
+	subResult = json->tryTogetResult(subResponseDom);
 
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
 
 	if(subResultValue->GetInt() < 0)
 	{
-		delete localDom;
 		throw Error("Could not open Aardvark.");
 	}
-	else
-	{
-		delete localDom;
-	}
-
 }
 
 
@@ -292,52 +272,44 @@ void I2c::aa_write(Value &params)
 	Value method;
 	Value localParams;
 	Value tempParam;
-	Value id;
 	Value array;
 	Value* valuePtr = NULL;
 	Value* subResultValue= NULL;
-	Document* localDom = new Document();
+
 
 	localParams.SetObject();
 	//get Aardvark handle
 	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[0]._name);
-	tempParam.SetString(_aa_i2c_write.paramArray[0]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
+	tempParam.SetString(_aa_i2c_write.paramArray[0]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//get slave addr
 	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[1]._name);
-	tempParam.SetString(_aa_i2c_write.paramArray[1]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, valuePtr->GetInt(), dom.GetAllocator());
+	tempParam.SetString(_aa_i2c_write.paramArray[1]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//get flags ?
-	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, 0, dom.GetAllocator());
+	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, 0, subRequestAllocator);
 
 	//get data
 	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[3]._name);
-	tempParam.SetString(_aa_i2c_write.paramArray[3]._name, dom.GetAllocator());
-	localParams.AddMember(tempParam, *valuePtr, dom.GetAllocator());
+	tempParam.SetString(_aa_i2c_write.paramArray[3]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, *valuePtr, subRequestAllocator);
 
-	method.SetString(_aa_i2c_write._name, dom.GetAllocator());
-	id.SetInt(++subRequestId);
-	subRequest = json->generateRequest(method, localParams, id);
+	method.SetString(_aa_i2c_write._name, subRequestAllocator);
+	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	workerInterface->transmit(subRequest, strlen(subRequest));
-	subResponse = waitForResponse(localDom);
+	waitForResponse();
 
 
-	subResult = json->tryTogetResult(localDom);
+	subResult = json->tryTogetResult(subResponseDom);
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
 
 	if(subResultValue->GetInt() < 0)
-	{
-		delete localDom;
 		throw Error("Could not open Aardvark.");
-	}
-	else
-	{
-		delete localDom;
-	}
+
 }
 
 
@@ -346,50 +318,38 @@ void I2c::aa_close(Value &params)
 {
 	Value method;
 	Value localParams;
-	Value id;
 	Value* subResultValue= NULL;
 
 	Value* deviceValue = NULL;
 	Value tempParam;
-	Document* localDom = new Document();
-
 
 	//Get exact method name
-	method.SetString(_aa_close._name, dom.GetAllocator());
+	method.SetString(_aa_close._name, subRequestAllocator);
 	//Get all needed params
 	localParams.SetObject();
-	tempParam.SetString(_aa_close.paramArray[0]._name , dom.GetAllocator());
+	tempParam.SetString(_aa_close.paramArray[0]._name , subRequestAllocator);
 
 	deviceValue = findObjectMember(params, _aa_close.paramArray[0]._name);
-	localParams.AddMember(tempParam, *deviceValue, dom.GetAllocator());
-	//id of this request is the one of the incomming request +1
+	localParams.AddMember(tempParam, *deviceValue, subRequestAllocator);
 
-	id.SetInt(++subRequestId);
-
-	subRequest = json->generateRequest(method, localParams, id);
+	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
 	workerInterface->transmit(subRequest, strlen(subRequest));
-	waitForResponse(localDom);
+	waitForResponse();
 
 
-	subResult = json->tryTogetResult(localDom);
+	json->tryTogetResult(subResponseDom);
 
 	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
 
 
 	if(subResultValue->GetInt() < 0)
 	{
-		delete localDom;
 		throw Error("Could not close Aardvark.");
 	}
 	else
-	{
-		params.AddMember("returnCode", subResultValue->GetInt(), dom.GetAllocator());
-		delete localDom;
-	}
-
-
+		params.AddMember("returnCode", subResultValue->GetInt(), subRequestAllocator);
 }
 
 
@@ -426,7 +386,7 @@ bool I2c::checkSubResult(Document* dom)
 }
 
 
-string* I2c::waitForResponse(Document* localDom)
+void I2c::waitForResponse()
 {
 	int retCode = 0;
 	bool noTimeout = true;
@@ -436,16 +396,10 @@ string* I2c::waitForResponse(Document* localDom)
 		retCode = sigtimedwait(&set, NULL, &timeout);
 		if(retCode < 0)
 		{
+			printf("%s\n", strerror(errno));
 			noTimeout = false;
-			printf("timeout ? : %s", strerror(errno));
-		}
-		else
-		{
-			json->parse(localDom, subMsg->getContent());
-			printf("SubResponse: %s\n", subMsg->getContent()->c_str());
-			return subMsg->getContent();
+			throw Error("Timeout waiting for subResponse.");
 		}
 	}
-	throw Error("Timeout waiting for subResponse.");
 }
 

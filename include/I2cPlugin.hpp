@@ -9,7 +9,7 @@
 #define WAIT_TIME 3 //wait time for loop
 
 
-#include "UdsServer.hpp"
+#include <ComServer.hpp>
 #include "RegClient.hpp"
 
 class RegClient;

@@ -1,4 +1,4 @@
-#include <UdsServer.hpp>
+#include <ComServer.hpp>
 #include "JsonRPC.hpp"
 
 
@@ -54,7 +54,8 @@ void UdsServer::thread_accept()
 		if(new_socket > 0)
 		{
 			i2c = new I2c();
-			comPoint = new ComPointB(new_socket, i2c, 1); //TODO: enter plugin id instead of just 1
+			comPoint = new ComPointB(new_socket, i2c, 2);
+			//TODO: enter plugin id instead of just 1
 			//dyn_print("Uds---> sNew UdsWorker with socket: %d \n", new_socket);
 			pushComPointList(comPoint);
 		}

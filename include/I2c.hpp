@@ -50,11 +50,12 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 			requestMethod = NULL;
 			subResult = NULL;
 			requestId = NULL;
-		    response = NULL;
+			subResponseId = NULL;
+		    mainResponse = NULL;
 			msgList = NULL;
-			subRequestId = 0;
 			json = new JsonRPC();
-			globalDom = NULL;
+			mainRequestDom = new Document();
+			subResponseDom = new Document();
 
 			//configure signal SIGUSR2 and timeout for receiving subresponses
 			sigemptyset(&set);
@@ -75,6 +76,8 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		~I2c()
 		{
 			delete json;
+			delete mainRequestDom;
+			delete subResponseDom;
 
 		};
 
@@ -89,7 +92,7 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
 		void process(RPCMsg* msg);
-		void isSubResponse(RPCMsg* rpcMsg);
+		bool isSubResponse(RPCMsg* rpcMsg);
 
 		bool isRequestInProcess();
 
@@ -101,26 +104,26 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		/** Deletes the deviceList, all Devices will be deallocated.*/
 		static void deleteDeviceList();
 
-
+		JsonRPC* json;
+		Document* mainRequestDom;
+		Document* subResponseDom;
+		rapidjson::MemoryPoolAllocator<> subRequestAllocator;
 
 		/*! Final response message.*/
-		const char* response;
+		const char* mainResponse;
 		/*! Request to another plugin.*/
 		const char* subRequest;
 		/*! Response from another plugin. */
-		string* subResponse;
+		const char* subResponse;
 		//for generating json rpc error responses
 		const char* error;
 
-		JsonRPC* json;
-		Document* globalDom;
-		Document dom;
-		Value* requestMethod;
 
+		Value* requestMethod;
 		/*! The json rpc id value of the current processing main request (received from RSD).*/
 		Value* requestId;
-		/*! The json rpc id value ot the last send subRequest (request to anther plugin).*/
-		int subRequestId;
+
+		Value* subResponseId;
 
 		Value* subResult;
 
@@ -146,7 +149,7 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		void aa_close(Value &params);
 
 		bool checkSubResult(Document* dom);
-		string* waitForResponse(Document* localDom);
+		void waitForResponse();
 
 		void deleteMsgList();
 

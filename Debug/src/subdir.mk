@@ -4,25 +4,25 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
+../src/ComServer.cpp \
 ../src/I2c.cpp \
 ../src/I2cPlugin.cpp \
 ../src/JsonRPC.cpp \
-../src/RegClient.cpp \
-../src/UdsServer.cpp 
+../src/RegClient.cpp 
 
 OBJS += \
+./src/ComServer.o \
 ./src/I2c.o \
 ./src/I2cPlugin.o \
 ./src/JsonRPC.o \
-./src/RegClient.o \
-./src/UdsServer.o 
+./src/RegClient.o 
 
 CPP_DEPS += \
+./src/ComServer.d \
 ./src/I2c.d \
 ./src/I2cPlugin.d \
 ./src/JsonRPC.d \
-./src/RegClient.d \
-./src/UdsServer.d 
+./src/RegClient.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
