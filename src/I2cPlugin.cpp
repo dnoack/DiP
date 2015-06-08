@@ -44,6 +44,8 @@ void I2cPlugin::start()
 		{
 			sleep(WAIT_TIME);
 			comServer->checkForDeletableWorker();
+			if(regClient->isDeletable())
+				pluginActive = false;
 		}
 	}
 	catch(Error &e)
