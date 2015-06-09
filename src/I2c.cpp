@@ -76,14 +76,19 @@ void I2c::process(RPCMsg* msg)
 bool I2c::isSubResponse(RPCMsg* rpcMsg)
 {
 	bool result = false;
+	Value tempId;
 
 	try
 	{
 		json->parse(subResponseDom, rpcMsg->getContent());
-		if(json->isResponse(subResponseDom))//TODO: check for correct json rpc id
-			result = true;
-		else
-			result = false;
+		if(json->isResponse(subResponseDom))
+		{
+			tempId.CopyFrom(*(json->getId(subResponseDom)), subResponseDom->GetAllocator());
+			if(tempId == *requestId)
+				result = true;
+			else
+				result = false;
+		}
 	}
 	catch(Error &e)
 	{
@@ -99,10 +104,7 @@ bool I2c::getI2cDevices(Value &params, Value &result)
 {
 
 	getAardvarkDevices(params, result);
-
-
 	//.. call further methods for getting other devices
-
 	//generate jsonrpc rsponse like {..... "result" : {Aardvark : [id1, id2, idx] , OtherDevice : [id1, id2, idx]}}
 
 	return true;

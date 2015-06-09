@@ -31,7 +31,7 @@ class I2cPlugin {
 
 		void deleteFuncList();
 
-		UdsServer* comServer;
+		ComServer* comServer;
 		RegClient* regClient;
 		bool pluginActive;
 		sigset_t sigmask;

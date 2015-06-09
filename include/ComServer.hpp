@@ -21,12 +21,12 @@
 
 
 
-class UdsServer : public AcceptThread{
+class ComServer : public AcceptThread{
 
 	public:
 
-		UdsServer(const char* udsFile, int nameSize);
-		~UdsServer();
+		ComServer(const char* udsFile, int nameSize, int pluginNumber);
+		~ComServer();
 
 
 		void checkForDeletableWorker();
@@ -35,6 +35,12 @@ class UdsServer : public AcceptThread{
 
 
 		 int connection_socket;
+		 int pluginNumber;
+
+		 /*!LogInformation for underlying ComPoints.*/
+		LogInformation infoIn;
+		LogInformation infoOut;
+		LogInformation info;
 
 		list<ComPointB*> comPointList;
 		pthread_mutex_t wLmutex;
