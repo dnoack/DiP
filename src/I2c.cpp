@@ -48,7 +48,7 @@ void I2c::process(RPCMsg* msg)
 				params = json->tryTogetParams(mainRequestDom);
 				requestId = json->getId(mainRequestDom);
 				executeFunction(*requestMethod, *params, result);
-				workerInterface->transmit(mainResponse, strlen(mainResponse));
+				comPoint->transmit(mainResponse, strlen(mainResponse));
 				delete *currentMsg;
 				currentMsg = msgList->erase(currentMsg);
 				setBusy(false);
@@ -64,7 +64,7 @@ void I2c::process(RPCMsg* msg)
 	catch(Error &e)
 	{
 		error = json->generateResponseError(*requestId, e.getErrorCode(), e.get());
-		workerInterface->transmit(error, strlen(error));
+		comPoint->transmit(error, strlen(error));
 		delete *currentMsg;
 		currentMsg = msgList->erase(currentMsg);
 		setBusy(false);
@@ -132,7 +132,7 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 	subRequest = json->generateRequest(method, params, *requestId);
 
 	//Send subRequest and wait for subResponse
-	workerInterface->transmit(subRequest, strlen(subRequest));
+	comPoint->transmit(subRequest, strlen(subRequest));
     waitForResponse();
 
 	subResult = json->tryTogetResult(subResponseDom);
@@ -208,7 +208,7 @@ void I2c::aa_open(Value &params)
 	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	workerInterface->transmit(subRequest, strlen(subRequest));
+	comPoint->transmit(subRequest, strlen(subRequest));
 	waitForResponse();
 
 	if(checkSubResult(subResponseDom))
@@ -252,7 +252,7 @@ void I2c::aa_target_power(Value &params)
 
 	subRequest = json->generateRequest(method, localParams, *requestId);
 
-	workerInterface->transmit(subRequest, strlen(subRequest));
+	comPoint->transmit(subRequest, strlen(subRequest));
 	waitForResponse();
 
 
@@ -300,7 +300,7 @@ void I2c::aa_write(Value &params)
 	method.SetString(_aa_i2c_write._name, subRequestAllocator);
 	subRequest = json->generateRequest(method, localParams, *requestId);
 
-	workerInterface->transmit(subRequest, strlen(subRequest));
+	comPoint->transmit(subRequest, strlen(subRequest));
 	waitForResponse();
 
 
@@ -335,7 +335,7 @@ void I2c::aa_close(Value &params)
 	subRequest = json->generateRequest(method, localParams, *requestId);
 
 	//send subRequest, wait for subresponse and parse subResponse to localDom (not overwriting dom of I2c)
-	workerInterface->transmit(subRequest, strlen(subRequest));
+	comPoint->transmit(subRequest, strlen(subRequest));
 	waitForResponse();
 
 
