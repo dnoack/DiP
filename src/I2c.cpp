@@ -136,19 +136,18 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
     waitForResponse();
 
 	subResult = json->tryTogetResult(subResponseDom);
-	if(subResult->IsObject())
-	{
-		i2cDeviceValue = &(*subResult)["devices"];
-		i2cUniqueIdValue = &(*subResult)["unique_ids"];
-		num_devices = i2cDeviceValue->Size();
-		currentParam.SetArray();
+	i2cDeviceValue = json->findObjectMember(*subResult, "devices");
+	i2cUniqueIdValue = json->findObjectMember(*subResult, "unique_ids");
+	num_devices = i2cDeviceValue->Size();
 
-		for(int i = 0; i < num_devices; i++)
-		{
-			deviceList.push_back(new I2cDevice("Aardvark", (*i2cDeviceValue)[i].GetInt(), (*i2cUniqueIdValue)[i].GetUint()));
-			currentParam.PushBack((*i2cUniqueIdValue)[i].GetUint(), requestDom->GetAllocator());
-		}
+
+	currentParam.SetArray();
+	for(int i = 0; i < num_devices; i++)
+	{
+		deviceList.push_back(new I2cDevice("Aardvark", (*i2cDeviceValue)[i].GetInt(), (*i2cUniqueIdValue)[i].GetUint()));
+		currentParam.PushBack((*i2cUniqueIdValue)[i].GetUint(), requestDom->GetAllocator());
 	}
+
 
 	result.SetObject();
 	result.AddMember("Aardvark", currentParam, requestDom->GetAllocator());
@@ -203,7 +202,7 @@ void I2c::aa_open(Value &params)
 	localParams.SetObject();
 	tempParam.SetString(_aa_open.paramArray[0]._name , subRequestAllocator);
 	//map "device" -> to "Aardvark"(_aa_open.paramArray[0]._name)
-	deviceValue = findObjectMember(params, "device");
+	deviceValue = json->findObjectMember(params, "device");
 	device = getPortByUniqueId(deviceValue->GetUint());
 	localParams.AddMember(tempParam, device, subRequestAllocator);
 	subRequest = json->generateRequest(method, localParams, *requestId);
@@ -215,7 +214,7 @@ void I2c::aa_open(Value &params)
 	if(checkSubResult(subResponseDom))
 	{
 		subResult = json->tryTogetResult(subResponseDom);
-		subResultValue = findObjectMember(*subResult, "Aardvark", kNumberType);
+		subResultValue = json->findObjectMember(*subResult, "Aardvark", kNumberType);
 
 		if(subResultValue->GetInt() < 0)
 			throw Error(subResponse);
@@ -237,14 +236,14 @@ void I2c::aa_target_power(Value &params)
 	Value* subResultValue= NULL;
 
 	localParams.SetObject();
-	Value* valuePtr = findObjectMember(params, _aa_target_power.paramArray[0]._name);
+	Value* valuePtr = json->findObjectMember(params, _aa_target_power.paramArray[0]._name);
 
 	//Aardvark handle
 	tempParam.SetString(_aa_target_power.paramArray[0]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//powerMask
-	valuePtr = findObjectMember(params, _aa_target_power.paramArray[1]._name);
+	valuePtr = json->findObjectMember(params, _aa_target_power.paramArray[1]._name);
 	tempParam.SetString(_aa_target_power.paramArray[1]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
@@ -259,7 +258,7 @@ void I2c::aa_target_power(Value &params)
 
 	subResult = json->tryTogetResult(subResponseDom);
 
-	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+	subResultValue = json->findObjectMember(*subResult, "returnCode", kNumberType);
 
 	if(subResultValue->GetInt() < 0)
 	{
@@ -280,12 +279,12 @@ void I2c::aa_write(Value &params)
 
 	localParams.SetObject();
 	//get Aardvark handle
-	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[0]._name);
+	valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[0]._name);
 	tempParam.SetString(_aa_i2c_write.paramArray[0]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
 	//get slave addr
-	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[1]._name);
+	valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[1]._name);
 	tempParam.SetString(_aa_i2c_write.paramArray[1]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
@@ -294,7 +293,7 @@ void I2c::aa_write(Value &params)
 	localParams.AddMember(tempParam, 0, subRequestAllocator);
 
 	//get data
-	valuePtr = findObjectMember(params, _aa_i2c_write.paramArray[3]._name);
+	valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[3]._name);
 	tempParam.SetString(_aa_i2c_write.paramArray[3]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, *valuePtr, subRequestAllocator);
 
@@ -306,7 +305,7 @@ void I2c::aa_write(Value &params)
 
 
 	subResult = json->tryTogetResult(subResponseDom);
-	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+	subResultValue = json->findObjectMember(*subResult, "returnCode", kNumberType);
 
 	if(subResultValue->GetInt() < 0)
 		throw Error("Could not open Aardvark.");
@@ -330,7 +329,7 @@ void I2c::aa_close(Value &params)
 	localParams.SetObject();
 	tempParam.SetString(_aa_close.paramArray[0]._name , subRequestAllocator);
 
-	deviceValue = findObjectMember(params, _aa_close.paramArray[0]._name);
+	deviceValue = json->findObjectMember(params, _aa_close.paramArray[0]._name);
 	localParams.AddMember(tempParam, *deviceValue, subRequestAllocator);
 
 	subRequest = json->generateRequest(method, localParams, *requestId);
@@ -342,7 +341,7 @@ void I2c::aa_close(Value &params)
 
 	json->tryTogetResult(subResponseDom);
 
-	subResultValue = findObjectMember(*subResult, "returnCode", kNumberType);
+	subResultValue = json->findObjectMember(*subResult, "returnCode", kNumberType);
 
 
 	if(subResultValue->GetInt() < 0)
