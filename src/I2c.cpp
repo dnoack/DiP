@@ -128,6 +128,7 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 	currentParam.SetString(_aa_find_devices_ext.paramArray[0]._name, requestDom->GetAllocator());
 	params.AddMember( currentParam, 256, requestDom->GetAllocator());
 
+
 	subRequest = json->generateRequest(method, params, *requestId);
 
 	//Send subRequest and wait for subResponse
@@ -400,6 +401,7 @@ void I2c::waitForResponse()
 			noTimeout = false;
 			throw Error("Timeout waiting for subResponse.");
 		}
+		noTimeout = false;
 	}
 }
 
