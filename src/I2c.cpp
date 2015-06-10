@@ -15,61 +15,34 @@ list<I2cDevice*> I2c::deviceList;
 
 
 
-void I2c::deleteMsgList()
-{
-	list<string*>::iterator msgIt = msgList->begin();
-	while(msgIt != msgList->end())
-	{
-		delete *msgIt;
-		msgIt = msgList->erase(msgIt);
-	}
-}
-
-
 void I2c::process(RPCMsg* msg)
 {
 	Value result;
 	Value* params = NULL;
-	list<string*>::iterator currentMsg;
 
 	try
 	{
-		msgList = NULL;
-		msgList = json->splitMsg(mainRequestDom, msg->getContent());
-		currentMsg = msgList->begin();
-
-		while(currentMsg != msgList->end())
+		json->parse(mainRequestDom, msg->getContent());
+		if(json->isRequest(mainRequestDom))
 		{
-			json->parse(mainRequestDom, *currentMsg);
-			if(json->isRequest(mainRequestDom))
-			{
-				setBusy(true);
-				requestMethod = json->tryTogetMethod(mainRequestDom);
-				params = json->tryTogetParams(mainRequestDom);
-				requestId = json->getId(mainRequestDom);
-				executeFunction(*requestMethod, *params, result);
-				comPoint->transmit(mainResponse, strlen(mainResponse));
-				delete *currentMsg;
-				currentMsg = msgList->erase(currentMsg);
-				setBusy(false);
-			}
-			else if(json->isNotification(mainRequestDom))
-			{
-				delete *currentMsg;
-				currentMsg = msgList->erase(currentMsg);
-			}
+			setBusy(true);
+			requestMethod = json->tryTogetMethod(mainRequestDom);
+			params = json->tryTogetParams(mainRequestDom);
+			requestId = json->getId(mainRequestDom);
+			executeFunction(*requestMethod, *params, result);
+			comPoint->transmit(mainResponse, strlen(mainResponse));
+			setBusy(false);
 		}
+		else if(json->isNotification(mainRequestDom))
+			delete msg;
 
 	}
 	catch(Error &e)
 	{
 		error = json->generateResponseError(*requestId, e.getErrorCode(), e.get());
 		comPoint->transmit(error, strlen(error));
-		delete *currentMsg;
-		currentMsg = msgList->erase(currentMsg);
 		setBusy(false);
 	}
-	deleteMsgList();
 }
 
 

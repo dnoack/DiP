@@ -52,7 +52,6 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 			requestId = NULL;
 			subResponseId = NULL;
 		    mainResponse = NULL;
-			msgList = NULL;
 			json = new JsonRPC();
 			mainRequestDom = new Document();
 			subResponseDom = new Document();
@@ -128,10 +127,6 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		Value* subResult;
 
 
-		/*Contains a list of (hopefully) json rpc requests or notifications.*/
-		list<string*>* msgList;
-
-
 		/*Sigset for configuring SIGUSR2 to signal the Reception of subresponses.*/
 		sigset_t set;
 		/* Contains the timeout configuration for waiting to subresponses.*/
@@ -150,8 +145,6 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 
 		bool checkSubResult(Document* dom);
 		void waitForResponse();
-
-		void deleteMsgList();
 
 		int getPortByUniqueId(unsigned int);
 
