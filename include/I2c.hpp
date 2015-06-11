@@ -18,12 +18,14 @@
 #include "document.h"
 #include "writer.h"
 
+#include "ComPointB.hpp"
 #include "DriverInterface.h"
 #include "WorkerThreads.hpp"
 #include "ProcessInterfaceB.hpp"
 #include "JsonRPC.hpp"
 #include "I2cDevice.hpp"
-#include "RPCMsg.hpp"
+#include "OutgoingMsg.hpp"
+#include "IncomingMsg.hpp"
 
 
 
@@ -90,7 +92,7 @@ class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
 		 * - A incorrect message will result into a thrown exception and sending a error response (json rpc) back.
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
-		void process(RPCMsg* msg);
+		OutgoingMsg* process(IncomingMsg* msg);
 		bool isSubResponse(RPCMsg* rpcMsg);
 
 		bool isRequestInProcess();

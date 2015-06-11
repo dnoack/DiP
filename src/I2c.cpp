@@ -15,14 +15,15 @@ list<I2cDevice*> I2c::deviceList;
 
 
 
-void I2c::process(RPCMsg* msg)
+OutgoingMsg* I2c::process(IncomingMsg* input)
 {
 	Value result;
 	Value* params = NULL;
+	OutgoingMsg* output = NULL;
 
 	try
 	{
-		json->parse(mainRequestDom, msg->getContent());
+		json->parse(mainRequestDom, input->getContent());
 		if(json->isRequest(mainRequestDom))
 		{
 			setBusy(true);
@@ -30,19 +31,23 @@ void I2c::process(RPCMsg* msg)
 			params = json->tryTogetParams(mainRequestDom);
 			requestId = json->getId(mainRequestDom);
 			executeFunction(*requestMethod, *params, result);
-			comPoint->transmit(mainResponse, strlen(mainResponse));
+			output = new OutgoingMsg(input->getOrigin(), mainResponse);
 			setBusy(false);
 		}
 		else if(json->isNotification(mainRequestDom))
-			delete msg;
+		{
+			//do nothing;
+		}
 
 	}
 	catch(Error &e)
 	{
 		error = json->generateResponseError(*requestId, e.getErrorCode(), e.get());
-		comPoint->transmit(error, strlen(error));
+		output = new OutgoingMsg(input->getOrigin(), error);
 		setBusy(false);
 	}
+	delete input;
+	return output;
 }
 
 
