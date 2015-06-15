@@ -1,6 +1,4 @@
 /core
 *.d
 *.o
-
 /Debug/
-/Release/
