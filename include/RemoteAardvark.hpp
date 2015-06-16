@@ -51,11 +51,11 @@
 #ifndef __aardvark_h__
 #define __aardvark_h__
 
+#include <RPCInterface.hpp>
 #include <stdio.h>
 
 #include "document.h"
 #include "writer.h"
-#include "DriverInterface.h"
 
 using namespace rapidjson;
 
@@ -1031,10 +1031,10 @@ static _function _aa_spi_write = {"Aardvark.aa_spi_write", NULL, 3, aa_spi_write
 static _function _aa_spi_master_ss_polarity = {"Aardvark.aa_spi_master_ss_polarity", NULL, 2, aa_spi_master_ss_polarity_params};
 
 
-class RemoteAardvark : public DriverInterface<RemoteAardvark*, afptr>{
+class RemoteAardvark : public RPCInterface<RemoteAardvark*, afptr>{
 
 	public:
-		RemoteAardvark(int port) : DriverInterface<RemoteAardvark*, afptr>(this)
+		RemoteAardvark(int port) : RPCInterface<RemoteAardvark*, afptr>(this)
 		{
 			this->port = port;
 			uniqueId = 0;

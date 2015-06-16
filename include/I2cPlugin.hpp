@@ -21,15 +21,9 @@ class I2cPlugin {
 		~I2cPlugin();
 
 
-		static list<string*>* getFuncList(){return funcList;}
-
 		void start();
 
 	private:
-
-		static list<string*>* funcList;
-
-		void deleteFuncList();
 
 		ComServer* comServer;
 		RegClient* regClient;

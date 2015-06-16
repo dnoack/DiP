@@ -3,8 +3,6 @@
 #include "I2c.hpp"
 
 
-list<string*>* I2cPlugin::funcList;
-
 
 I2cPlugin::I2cPlugin()
 {
@@ -14,12 +12,12 @@ I2cPlugin::I2cPlugin()
 	sigaddset(&sigmask, SIGUSR1);
 	sigaddset(&sigmask, SIGUSR2);
 	pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
-	//get List of key, which are supported by the driver
+
 	I2c* tempDriver = new I2c();
-	funcList = tempDriver->getAllFunctionNames();
+	list<string*>* functionList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 
-	regClient = new RegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, COM_PATH);
+	regClient = new RegClient(new Plugin(PLUGIN_NAME, PLUGIN_NUMBER, COM_PATH), functionList, REG_PATH);
 	comServer = new ComServer(COM_PATH, sizeof(COM_PATH), PLUGIN_NUMBER);
 }
 
@@ -28,7 +26,6 @@ I2cPlugin::~I2cPlugin()
 {
 	delete comServer;
 	delete regClient;
-	deleteFuncList();
 }
 
 
@@ -52,17 +49,6 @@ void I2cPlugin::start()
 	{
 		printf("%s \n", e.get());
 	}
-}
-
-void I2cPlugin::deleteFuncList()
-{
-	list<string*>::iterator i = funcList->begin();
-	while(i != funcList->end())
-	{
-		delete *i;
-		i = funcList->erase(i);
-	}
-	delete funcList;
 }
 
 #ifndef TESTMODE

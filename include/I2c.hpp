@@ -19,7 +19,7 @@
 #include "writer.h"
 
 #include "ComPointB.hpp"
-#include "DriverInterface.h"
+#include <RPCInterface.hpp>
 #include "WorkerThreads.hpp"
 #include "ProcessInterfaceB.hpp"
 #include "JsonRPC.hpp"
@@ -37,12 +37,12 @@ class I2c;
 typedef bool (I2c::*i2cfptr)(Value&, Value&);
 
 
-class I2c : public ProcessInterfaceB, public DriverInterface<I2c*, i2cfptr>
+class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 {
 	public:
 
 
-		I2c() : DriverInterface<I2c*, i2cfptr>(this)
+		I2c() : RPCInterface<I2c*, i2cfptr>(this)
 		{
 			i2cfptr fptr;
 
