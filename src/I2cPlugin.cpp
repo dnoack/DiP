@@ -1,62 +1,63 @@
-#include <ComServer.hpp>
 #include <I2cPlugin.hpp>
 #include "I2c.hpp"
 
 
 
-I2cPlugin::I2cPlugin()
+I2cPlugin::I2cPlugin(PluginInfo* pluginInfo) : PluginInterface(pluginInfo)
 {
-	pluginActive = true;
-	sigemptyset(&origmask);
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGUSR1);
-	sigaddset(&sigmask, SIGUSR2);
-	pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
-
 	I2c* tempDriver = new I2c();
 	list<string*>* functionList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 
-	regClient = new RegClient(new Plugin(PLUGIN_NAME, PLUGIN_NUMBER, COM_PATH), functionList, REG_PATH);
-	comServer = new ComServer(COM_PATH, sizeof(COM_PATH), PLUGIN_NUMBER);
+	StartAcceptThread();
+	if(wait_for_accepter_up() != 0)
+		throw Error("Creation of Listener/worker threads failed.");
+
+	pluginActive = true;
+
+	regClient = new RegClient(pluginInfo, functionList, REG_PATH);
 }
 
 
 I2cPlugin::~I2cPlugin()
 {
-	delete comServer;
 	delete regClient;
 }
 
 
-void I2cPlugin::start()
+void I2cPlugin::thread_accept()
 {
-	try
-	{
-		regClient->connectToRSD();
-		regClient->sendAnnounceMsg();
+	int new_socket = 0;
+	ComPointB* comPoint = NULL;
+	I2c* i2c = NULL;
+	listen(connection_socket, MAX_CLIENTS);
 
-		pluginActive = true;
-		while(pluginActive)
+	//dyn_print("Accepter created\n");
+	while(true)
+	{
+		new_socket = accept(connection_socket, (struct sockaddr*)&address, &addrlen);
+		if(new_socket > 0)
 		{
-			sleep(WAIT_TIME);
-			comServer->checkForDeletableWorker();
-			if(regClient->isDeletable())
-				pluginActive = false;
+			i2c = new I2c();
+			comPoint = new ComPointB(new_socket, i2c, pluginNumber);
+			comPoint->configureLogInfo(&infoIn, &infoOut, &info);
+			//dyn_print("Uds---> sNew UdsWorker with socket: %d \n", new_socket);
+			pushComPointList(comPoint);
 		}
 	}
-	catch(Error &e)
-	{
-		printf("%s \n", e.get());
-	}
 }
+
 
 #ifndef TESTMODE
 int main(int argc, const char** argv)
 {
-	I2cPlugin* plugin = new I2cPlugin();
+	PluginInfo* pluginInfo = new PluginInfo(PLUGIN_NAME, PLUGIN_NUMBER, COM_PATH);
+	I2cPlugin* plugin = new I2cPlugin(pluginInfo);
+
 	plugin->start();
+
 	delete plugin;
+	delete pluginInfo;
 	return 0;
 }
 #endif

@@ -4,17 +4,14 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../src/ComServer.cpp \
 ../src/I2c.cpp \
 ../src/I2cPlugin.cpp 
 
 OBJS += \
-./src/ComServer.o \
 ./src/I2c.o \
 ./src/I2cPlugin.o 
 
 CPP_DEPS += \
-./src/ComServer.d \
 ./src/I2c.d \
 ./src/I2cPlugin.d 
 
