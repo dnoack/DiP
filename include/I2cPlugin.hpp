@@ -1,12 +1,15 @@
 #ifndef INCLUDE_I2CPLUGIN_HPP_
 #define INCLUDE_I2CPLUGIN_HPP_
 
+
 #include "PluginInterface.hpp"
 
 #define REG_PATH "/tmp/RsdRegister.uds"
 #define COM_PATH "/tmp/i2cdip.uds"
 #define PLUGIN_NAME "i2c"
 #define PLUGIN_NUMBER 2
+
+
 
 
 

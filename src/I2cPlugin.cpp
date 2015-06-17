@@ -39,9 +39,11 @@ void I2cPlugin::thread_accept()
 		if(new_socket > 0)
 		{
 			i2c = new I2c();
-			comPoint = new ComPointB(new_socket, i2c, pluginNumber);
+			comPoint = new ComPointB(new_socket, i2c, pluginNumber, false);
 			comPoint->configureLogInfo(&infoIn, &infoOut, &info);
-			//dyn_print("Uds---> sNew UdsWorker with socket: %d \n", new_socket);
+			comPoint->setLogMethod(SYSLOG_LOG);
+			comPoint->setSyslogFacility(LOG_LOCAL2);
+			comPoint->startWorking();
 			pushComPointList(comPoint);
 		}
 	}

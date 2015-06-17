@@ -1,11 +1,3 @@
-/*
- * I2c.hpp
- *
- *  Created on: 17.03.2015
- *      Author: dnoack
- */
-
-
 #ifndef I2C_H_
 #define I2C_H_
 
