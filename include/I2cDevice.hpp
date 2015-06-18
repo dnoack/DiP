@@ -20,10 +20,7 @@ class I2cDevice{
 		};
 
 
-		virtual ~I2cDevice()
-		{
-			delete name;
-		};
+		virtual ~I2cDevice(){};
 
 
 		const char* getName(){return this->name;}

@@ -71,6 +71,7 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 			delete json;
 			delete mainRequestDom;
 			delete subResponseDom;
+			deleteDeviceList();
 
 		};
 
@@ -85,6 +86,7 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
 		OutgoingMsg* process(IncomingMsg* msg);
+
 		bool isSubResponse(RPCMsg* rpcMsg);
 
 		bool isRequestInProcess();
@@ -92,10 +94,10 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 	private:
 
 		/** Stores all I2cDevices which can be get through rpc messages to the corresponding plugins.*/
-		static list<I2cDevice*> deviceList;
+		list<I2cDevice*> deviceList;
 
 		/** Deletes the deviceList, all Devices will be deallocated.*/
-		static void deleteDeviceList();
+		void deleteDeviceList();
 
 		JsonRPC* json;
 		Document* mainRequestDom;

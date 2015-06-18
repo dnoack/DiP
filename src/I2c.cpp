@@ -11,9 +11,6 @@
 
 
 
-list<I2cDevice*> I2c::deviceList;
-
-
 
 OutgoingMsg* I2c::process(IncomingMsg* input)
 {
@@ -38,7 +35,6 @@ OutgoingMsg* I2c::process(IncomingMsg* input)
 		{
 			//do nothing;
 		}
-
 	}
 	catch(Error &e)
 	{
@@ -70,9 +66,8 @@ bool I2c::isSubResponse(RPCMsg* rpcMsg)
 	}
 	catch(Error &e)
 	{
-		result = NULL;
+		result = false;
 	}
-
 	return result;
 }
 
@@ -381,6 +376,16 @@ void I2c::waitForResponse()
 			throw Error("Timeout waiting for subResponse.");
 		}
 		noTimeout = false;
+	}
+}
+
+void I2c::deleteDeviceList()
+{
+	list<I2cDevice*>::iterator device = deviceList.begin();
+	while( device != deviceList.end())
+	{
+		delete *device;
+		device = deviceList.erase(device);
 	}
 }
 
