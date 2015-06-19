@@ -1,74 +1,65 @@
 #include <I2cPlugin.hpp>
-#include "UdsServer.hpp"
 #include "I2c.hpp"
 
 
-list<string*>* I2cPlugin::funcList;
 
-
-I2cPlugin::I2cPlugin()
+I2cPlugin::I2cPlugin(PluginInfo* pluginInfo) : PluginInterface(pluginInfo)
 {
-	pluginActive = true;
-	sigemptyset(&origmask);
-	sigemptyset(&sigmask);
-	sigaddset(&sigmask, SIGUSR1);
-	sigaddset(&sigmask, SIGUSR2);
-	pthread_sigmask(SIG_BLOCK, &sigmask, &origmask);
-	//get List of key, which are supported by the driver
-	I2c* tempDriver = new I2c(NULL);
-	funcList = tempDriver->getAllFunctionNames();
+	I2c* tempDriver = new I2c();
+	list<string*>* functionList = tempDriver->getAllFunctionNames();
 	delete tempDriver;
 
-	regClient = new UdsRegClient(PLUGIN_NAME, PLUGIN_NUMBER, REG_PATH, COM_PATH);
-	comServer = new UdsServer(COM_PATH, sizeof(COM_PATH));
+	StartAcceptThread();
+	if(wait_for_accepter_up() != 0)
+		throw Error("Creation of Listener/worker threads failed.");
+
+	pluginActive = true;
+
+	regClient = new RegClient(pluginInfo, functionList, REG_PATH);
 }
 
 
 I2cPlugin::~I2cPlugin()
 {
-	delete comServer;
 	delete regClient;
-	deleteFuncList();
 }
 
 
-void I2cPlugin::start()
+void I2cPlugin::thread_accept()
 {
-	try
-	{
-		regClient->connectToRSD();
-		regClient->sendAnnounceMsg();
+	int new_socket = 0;
+	ComPointB* comPoint = NULL;
+	I2c* i2c = NULL;
+	listen(connection_socket, MAX_CLIENTS);
 
-		pluginActive = true;
-		while(pluginActive)
+	//dyn_print("Accepter created\n");
+	while(true)
+	{
+		new_socket = accept(connection_socket, (struct sockaddr*)&address, &addrlen);
+		if(new_socket > 0)
 		{
-			sleep(WAIT_TIME);
-			comServer->checkForDeletableWorker();
+			i2c = new I2c();
+			comPoint = new ComPointB(new_socket, i2c, pluginNumber, false);
+			comPoint->configureLogInfo(&infoIn, &infoOut, &info);
+			comPoint->setLogMethod(SYSLOG_LOG);
+			comPoint->setSyslogFacility(LOG_LOCAL2);
+			comPoint->startWorking();
+			pushComPointList(comPoint);
 		}
 	}
-	catch(Error &e)
-	{
-		printf("%s \n", e.get());
-	}
 }
 
-void I2cPlugin::deleteFuncList()
-{
-	list<string*>::iterator i = funcList->begin();
-	while(i != funcList->end())
-	{
-		delete *i;
-		i = funcList->erase(i);
-	}
-	delete funcList;
-}
 
 #ifndef TESTMODE
 int main(int argc, const char** argv)
 {
-	I2cPlugin* plugin = new I2cPlugin();
+	PluginInfo* pluginInfo = new PluginInfo(PLUGIN_NAME, PLUGIN_NUMBER, COM_PATH);
+	I2cPlugin* plugin = new I2cPlugin(pluginInfo);
+
 	plugin->start();
+
 	delete plugin;
+	delete pluginInfo;
 	return 0;
 }
 #endif

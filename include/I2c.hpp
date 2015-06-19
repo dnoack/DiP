@@ -1,63 +1,60 @@
-/*
- * I2c.hpp
- *
- *  Created on: 17.03.2015
- *      Author: dnoack
- */
-
-
 #ifndef I2C_H_
 #define I2C_H_
 
 /*! Timeout in seconds for waiting for a subresponse*/
-#define SUBRESPONSE_TIMEOUT 5
+#define SUBRESPONSE_TIMEOUT 180
 
 #include <pthread.h>
+#include <ctime>
 
 #include "document.h"
 #include "writer.h"
 
-#include "DriverInterface.h"
+#include "ComPointB.hpp"
+#include <RPCInterface.hpp>
+#include "WorkerThreads.hpp"
+#include "ProcessInterfaceB.hpp"
 #include "JsonRPC.hpp"
 #include "I2cDevice.hpp"
+#include "OutgoingMsg.hpp"
+#include "IncomingMsg.hpp"
 
 
 
 using namespace rapidjson;
 
 class I2c;
-class UdsComWorker;
+
 
 typedef bool (I2c::*i2cfptr)(Value&, Value&);
 
 
-class I2c : public DriverInterface<I2c*, i2cfptr>
+class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 {
 	public:
 
 
-		I2c(UdsComWorker* udsWorker) : DriverInterface<I2c*, i2cfptr>(this)
+		I2c() : RPCInterface<I2c*, i2cfptr>(this)
 		{
-			pthread_mutex_init(&rIPMutex, NULL);
 			i2cfptr fptr;
 
-			this-> udsWorker = udsWorker;
-			this->subResponse = NULL;
-			this->subRequest = NULL;
-			this->requestMethod = NULL;
-			this->subResult = NULL;
-			this->requestId = NULL;
-			this->response = NULL;
-			this->msgList = NULL;
-			this->subRequestId = 0;
-			this->json = new JsonRPC();
+			subResponse = NULL;
+			error = NULL;
+			subRequest = NULL;
+			requestMethod = NULL;
+			subResult = NULL;
+			requestId = NULL;
+			subResponseId = NULL;
+		    mainResponse = NULL;
+			json = new JsonRPC();
+			mainRequestDom = new Document();
+			subResponseDom = new Document();
 
 			//configure signal SIGUSR2 and timeout for receiving subresponses
 			sigemptyset(&set);
 			sigaddset(&set, SIGUSR2);
 			timeout.tv_sec = SUBRESPONSE_TIMEOUT;
 			timeout.tv_nsec = 0;
-
 
 
 			fptr = &I2c::write;
@@ -72,7 +69,10 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		~I2c()
 		{
 			delete json;
-			pthread_mutex_destroy(&rIPMutex);
+			delete mainRequestDom;
+			delete subResponseDom;
+			deleteDeviceList();
+
 		};
 
 
@@ -85,44 +85,42 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		 * - A incorrect message will result into a thrown exception and sending a error response (json rpc) back.
 		 * \param msg A string containing a Json RPC request or notification.
 		 */
-		void processMsg(string* msg);
+		OutgoingMsg* process(IncomingMsg* msg);
+
+		bool isSubResponse(RPCMsg* rpcMsg);
 
 		bool isRequestInProcess();
 
 	private:
 
 		/** Stores all I2cDevices which can be get through rpc messages to the corresponding plugins.*/
-		static list<I2cDevice*> deviceList;
+		list<I2cDevice*> deviceList;
 
 		/** Deletes the deviceList, all Devices will be deallocated.*/
-		static void deleteDeviceList();
+		void deleteDeviceList();
 
-
+		JsonRPC* json;
+		Document* mainRequestDom;
+		Document* subResponseDom;
+		rapidjson::MemoryPoolAllocator<> subRequestAllocator;
 
 		/*! Final response message.*/
-		const char* response;
+		const char* mainResponse;
 		/*! Request to another plugin.*/
 		const char* subRequest;
 		/*! Response from another plugin. */
-		string* subResponse;
+		const char* subResponse;
+		//for generating json rpc error responses
+		const char* error;
 
-		JsonRPC* json;
-		Document dom;
+
 		Value* requestMethod;
-		pthread_mutex_t rIPMutex;
-		bool requestInProcess;
-
 		/*! The json rpc id value of the current processing main request (received from RSD).*/
 		Value* requestId;
-		/*! The json rpc id value ot the last send subRequest (request to anther plugin).*/
-		int subRequestId;
+
+		Value* subResponseId;
 
 		Value* subResult;
-
-		/*Corresponding Unix-Domain-Socket Communication modul.*/
-		UdsComWorker* udsWorker;
-		/*Contains a list of (hopefully) json rpc requests or notifications.*/
-		list<string*>* msgList;
 
 
 		/*Sigset for configuring SIGUSR2 to signal the Reception of subresponses.*/
@@ -142,21 +140,9 @@ class I2c : public DriverInterface<I2c*, i2cfptr>
 		void aa_close(Value &params);
 
 		bool checkSubResult(Document* dom);
-		string* waitForResponse();
-
-		void deleteMsgList();
+		void waitForResponse();
 
 		int getPortByUniqueId(unsigned int);
-
-
-
-
-
-		void setRequestInProcess();
-
-		void setRequestNotInProcess();
-
-
 
 };
 
