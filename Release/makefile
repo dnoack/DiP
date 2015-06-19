@@ -38,19 +38,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: DiP
+all: I2C-Plugin
 
 # Tool invocations
-DiP: $(OBJS) $(USER_OBJS)
+I2C-Plugin: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L"/home/dave2/git/rpcUtils/Release" -o "DiP" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"/home/dave2/git/rpcUtils/Release" ${LDFLAGS} -o "I2C-Plugin" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) DiP
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) I2C-Plugin
 	-@echo ' '
 
 .PHONY: all clean dependents
