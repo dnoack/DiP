@@ -88,7 +88,7 @@
 									<listOptionValue builtIn="false" value="/home/dave2/git/rapidjson/include/rapidjson"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
 								</option>
-								<option id="gnu.cpp.compiler.option.other.other.1200815614" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 ${CFLAGS}" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.other.other.1200815614" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 ${CXXFLAGS}" valueType="string"/>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.854861010" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def"/>
 								<option id="gnu.cpp.compiler.option.dialect.std.265506197" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1689936951" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
@@ -96,6 +96,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1699874999" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1285300454" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1777908134" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.misc.other.337326086" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 ${CFLAGS}" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.2024138282" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.300755003" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug"/>
