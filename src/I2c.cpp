@@ -33,6 +33,8 @@ I2c::I2c() : RPCInterface<I2c*, i2cfptr>(this)
 
 	fptr = &I2c::write;
 	funcMap.insert(pair<const char*, i2cfptr>("i2c.write", fptr));
+	fptr = &I2c::read;
+	funcMap.insert(pair<const char*, i2cfptr>("i2c.read", fptr));
 	fptr = &I2c::getAardvarkDevices;
 	funcMap.insert(pair<const char*, i2cfptr>("i2c.getAardvarkDevices", fptr));
 	fptr= &I2c::getI2cDevices;
@@ -192,11 +194,46 @@ bool I2c::write(Value &params, Value &result)
 	}
 	catch(Error &e)
 	{
-		printf("%s\n", e.get());
 		throw;
 	}
 	return true;
 }
+
+
+bool I2c::read(Value &params, Value &result)
+{
+	try
+	{
+		Value data_out;
+		rapidjson::MemoryPoolAllocator<> &subRequestAllocator = json->getRequestDOM()->GetAllocator();
+		result.SetObject();
+
+		aa_open(params);
+		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, subRequestAllocator);
+		aa_target_power(params);
+
+		data_out.SetArray();
+		data_out.PushBack(params["mem_addr"], subRequestAllocator);
+		params.AddMember("data_out", data_out, subRequestAllocator);
+
+		params.AddMember("AardvarkI2cFlags", AA_I2C_NO_STOP, subRequestAllocator);
+		aa_write(params);
+
+		params.EraseMember("AardvarkI2cFlags");
+		aa_read(params, result);
+		aa_close(params);
+
+		result.AddMember("returnCode", "OK", subRequestAllocator);
+		mainResponse = json->generateResponse(*requestId, result);
+	}
+	catch(Error &e)
+	{
+		throw;
+	}
+	return true;
+}
+
+
 
 
 void I2c::aa_open(Value &params)
@@ -301,9 +338,15 @@ void I2c::aa_write(Value &params)
 	tempParam.SetString(_aa_i2c_write.paramArray[1]._name, subRequestAllocator);
 	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
 
-	//get flags ?
+	//get flags, flags are optional
 	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, subRequestAllocator);
-	localParams.AddMember(tempParam, 0, subRequestAllocator);
+	if(params.HasMember(_aa_i2c_write.paramArray[2]._name))
+	{
+		valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[2]._name);
+		localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
+	}
+	else
+		localParams.AddMember(tempParam, AA_I2C_NO_FLAGS, subRequestAllocator);
 
 	//get data
 	valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[3]._name);
@@ -324,6 +367,67 @@ void I2c::aa_write(Value &params)
 		throw Error("Could not open Aardvark.");
 
 }
+
+
+void I2c::aa_read(Value &params, Value &result)
+{
+	Value method;
+	Value localParams;
+	Value tempParam;
+	Value array;
+	Value* valuePtr = NULL;
+	Value* subResultValue= NULL;
+
+	rapidjson::MemoryPoolAllocator<> &subRequestAllocator = json->getRequestDOM()->GetAllocator();
+
+
+	localParams.SetObject();
+	//get Aardvark handle
+	valuePtr = json->findObjectMember(params, _aa_i2c_read.paramArray[0]._name);
+	tempParam.SetString(_aa_i2c_read.paramArray[0]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
+
+	//get slave addr
+	valuePtr = json->findObjectMember(params, _aa_i2c_read.paramArray[1]._name);
+	tempParam.SetString(_aa_i2c_read.paramArray[1]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
+
+
+	//get flags, flags are optional
+	tempParam.SetString(_aa_i2c_write.paramArray[2]._name, subRequestAllocator);
+	if(params.HasMember(_aa_i2c_write.paramArray[2]._name))
+	{
+		valuePtr = json->findObjectMember(params, _aa_i2c_write.paramArray[2]._name);
+		localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
+	}
+	else
+		localParams.AddMember(tempParam, AA_I2C_NO_FLAGS, subRequestAllocator);
+
+
+	//num_bytes
+	valuePtr = json->findObjectMember(params, _aa_i2c_read.paramArray[3]._name);
+	tempParam.SetString(_aa_i2c_read.paramArray[3]._name, subRequestAllocator);
+	localParams.AddMember(tempParam, valuePtr->GetInt(), subRequestAllocator);
+
+	method.SetString(_aa_i2c_read._name, subRequestAllocator);
+	subRequest = json->generateRequest(method, localParams, *requestId);
+
+	comPoint->transmit(subRequest, strlen(subRequest));
+	waitForResponse();
+
+
+	subResult = json->tryTogetResult(subResponseDom);
+	subResultValue = json->findObjectMember(*subResult, "returnCode", kNumberType);
+
+	if(subResultValue->GetInt() < 0)
+		throw Error("Could not open Aardvark.");
+
+	//add member data_in from subresponse to result of mainresponse
+	subResultValue = json->findObjectMember(*subResult, "data_in", kArrayType);
+	result.AddMember("data_in", *subResultValue, subRequestAllocator);
+
+}
+
 
 
 

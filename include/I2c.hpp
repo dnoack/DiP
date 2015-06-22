@@ -127,9 +127,19 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 
 
 		/**
+		 * Sends aa_open, aa_target_power, aa_i2c_write and aa_close as json rpc requests to the Aardvark-Plugin.
+		 * Every request is send as sub-request, while waiting for a sub-response the function will block. Every
+		 * sub-request will have the same json rpc id as the main request. Because of that, a sub-response can assigned
+		 * to a sub-request and/or the main-request. If everything works fine, the function will send a json rpc response for
+		 * the main-request. If something goes wrong a json rpc error response will be send immediately and aa_write will be aborted.
 		 *
 		 */
 		bool write(Value &params, Value &result);
+
+
+
+		bool read(Value &params, Value &result);
+
 
 		/**
 		 * Sends a json rpc request (sub-request) to the Aardvark-plugin and waits for the
@@ -148,15 +158,12 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 		void aa_target_power(Value &params);
 
 
-		/**
-		 * Sends aa_open, aa_target_power, aa_i2c_write and aa_close as json rpc requests to the Aardvark-Plugin.
-		 * Every request is send as sub-request, while waiting for a sub-response the function will block. Every
-		 * sub-request will have the same json rpc id as the main request. Because of that, a sub-response can assigned
-		 * to a sub-request and/or the main-request. If everything works fine, the function will send a json rpc response for
-		 * the main-request. If something goes wrong a json rpc error response will be send immediately and aa_write will be aborted.
-		 *
-		 */
+
 		void aa_write(Value &params);
+
+
+
+		void aa_read(Value &params, Value &result);
 
 
 		/**
