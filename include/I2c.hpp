@@ -20,88 +20,69 @@
 #include "IncomingMsg.hpp"
 
 
-
 using namespace rapidjson;
 
 class I2c;
 
-
+/** Signature of a functionpointer to a memberfunction of I2c.*/
 typedef bool (I2c::*i2cfptr)(Value&, Value&);
 
 
+/**
+ * \class I2c
+ * I2c is a device independent plugin. Device independent means that it has no underlying
+ * driver or driver api assigned to hardware. It uses other plugins, through RSD, to control
+ * hardware. It is possible to make the RPC functions of I2c more complex/intelligent and through that
+ * the origin client requests more easy. For the functionality of sending and receiving sub-requests
+ * to and from other plugins it uses ProcessInterfacB and ComPointB, which are slightly different from
+ * ProcessInterface and ComPoint. After sending a sub-request, the corresponding function will block and
+ * wait for a sub-response. ComPointB can receive further messages during this block and let them analyze through
+ * ProcessInterfaceb. If the incoming message is the message the functions waits for, the function stops blocking
+ * and continues to work.
+ */
 class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 {
 	public:
 
-
-		I2c() : RPCInterface<I2c*, i2cfptr>(this)
-		{
-			i2cfptr fptr;
-
-			subResponse = NULL;
-			error = NULL;
-			subRequest = NULL;
-			requestMethod = NULL;
-			subResult = NULL;
-			requestId = NULL;
-			subResponseId = NULL;
-		    mainResponse = NULL;
-			json = new JsonRPC();
-			mainRequestDom = new Document();
-			subResponseDom = new Document();
-
-			//configure signal SIGUSR2 and timeout for receiving subresponses
-			sigemptyset(&set);
-			sigaddset(&set, SIGUSR2);
-			timeout.tv_sec = SUBRESPONSE_TIMEOUT;
-			timeout.tv_nsec = 0;
+		/**Base-constructor.*/
+		I2c();
 
 
-			fptr = &I2c::write;
-			funcMap.insert(pair<const char*, i2cfptr>("i2c.write", fptr));
-			fptr = &I2c::getAardvarkDevices;
-			funcMap.insert(pair<const char*, i2cfptr>("i2c.getAardvarkDevices", fptr));
-			fptr= &I2c::getI2cDevices;
-			funcMap.insert(pair<const char*, i2cfptr>("i2c.getI2cDevices", fptr));
-		}
-
-
-		~I2c()
-		{
-			delete json;
-			delete mainRequestDom;
-			delete subResponseDom;
-			deleteDeviceList();
-
-		};
+		/**Base-destructor.*/
+		~I2c();
 
 
 		/**
-		 * Main method for processing a incomming message.
-		 * - First the message will be checked for multiple json rpc messages, the result is within msgList.
-		 * - msgList can now contain correct json rpc messages and not parsable messages.
-		 * - msgList will then be iterated and every and a parse function will try to parse the message.
-		 * - A correct message will be forward to executeFunction()
-		 * - A incorrect message will result into a thrown exception and sending a error response (json rpc) back.
-		 * \param msg A string containing a Json RPC request or notification.
+		 * Analyzes the incoming message and executes a requested function of I2c.
+		 * Only json rpc requests or notification can be processed by I2c.
+		 * Response or anything else will be discarded. Notifications are only used for binding
+		 * a I2c instance to a ConnectionContext.
+		 * \param input The incoming message we want to process.
+		 * \return Outgoing message containing a json rpc response or error response.
 		 */
-		OutgoingMsg* process(IncomingMsg* msg);
+		OutgoingMsg* process(IncomingMsg* input);
 
+
+		/**
+		 * Checks if a message is a json rpc response and if the json rpc id is the same
+		 * as the one from the last main-request.
+		 * \param rpcMsg The message that should be analyzed.
+		 * \return True if the message is the corresponding subResponse to a main-request, false otherwise.
+		 */
 		bool isSubResponse(RPCMsg* rpcMsg);
 
-		bool isRequestInProcess();
 
 	private:
 
 		/** Stores all I2cDevices which can be get through rpc messages to the corresponding plugins.*/
 		list<I2cDevice*> deviceList;
-
-		/** Deletes the deviceList, all Devices will be deallocated.*/
-		void deleteDeviceList();
-
+		/** Json RPC parser.*/
 		JsonRPC* json;
+		/** DOM for the main-request.*/
 		Document* mainRequestDom;
+		/** DOM for the sub-response.*/
 		Document* subResponseDom;
+		/** */
 		rapidjson::MemoryPoolAllocator<> subRequestAllocator;
 
 		/*! Final response message.*/
@@ -112,14 +93,9 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 		const char* subResponse;
 		//for generating json rpc error responses
 		const char* error;
-
-
-		Value* requestMethod;
 		/*! The json rpc id value of the current processing main request (received from RSD).*/
 		Value* requestId;
-
-		Value* subResponseId;
-
+		/*! Containing the value "result" of the las sub-response.*/
 		Value* subResult;
 
 
@@ -129,20 +105,91 @@ class I2c : public ProcessInterfaceB, public RPCInterface<I2c*, i2cfptr>
 		struct timespec timeout;
 
 
+		/** Deletes the deviceList, all Devices will be deallocated.*/
+		void deleteDeviceList();
+
+		/**
+		 * Calls all function to gather information about all devices with I²C interfaces.
+		 * \params Can be an empty rapidjson::Value.
+		 * \return Will contain a named array for every different I²C hardware.
+		 *  The array-name will be the name of the hardware and will contain the unique identifiers.
+		 */
 		bool getI2cDevices(Value &params, Value &result);
+
+
+		/**
+		 * Gets all Aardvark devices and saves them to a list.
+		 * For getting the information about the aardvark devices, a sub-request to the Aardvark-Plugin will be send
+		 * and a sub-response will be received.
+		 * \return Will contain a array named "Aardvark" and all serial numbers of the different Aardvark devices which are available.
+		 */
 		bool getAardvarkDevices(Value &params, Value &result);
+
+
+		/**
+		 *
+		 */
 		bool write(Value &params, Value &result);
 
-
+		/**
+		 * Sends a json rpc request (sub-request) to the Aardvark-plugin and waits for the
+		 * corresponding sub-response. On success the function will add the received result
+		 * to the value params, so that further functions can use it.
+		 * \throws Error If a json rpc error response was received as sub-response.
+		 */
 		void aa_open(Value &params);
+
+
+		/**
+		 * Sends a json rpc request (sub-request) to the Aardvark-plugin and waits for the corresponding
+		 * sub-response.
+		 * \throws Error If the received json rpc response contains a negative return value.
+		 */
 		void aa_target_power(Value &params);
+
+
+		/**
+		 * Sends aa_open, aa_target_power, aa_i2c_write and aa_close as json rpc requests to the Aardvark-Plugin.
+		 * Every request is send as sub-request, while waiting for a sub-response the function will block. Every
+		 * sub-request will have the same json rpc id as the main request. Because of that, a sub-response can assigned
+		 * to a sub-request and/or the main-request. If everything works fine, the function will send a json rpc response for
+		 * the main-request. If something goes wrong a json rpc error response will be send immediately and aa_write will be aborted.
+		 *
+		 */
 		void aa_write(Value &params);
+
+
+		/**
+		 * Sends a json rpc request (sub-request) to the Aardvark-plugin and waits for the corresponding
+		 * sub-response.
+		 * \throws Error If the received json rpc response contains a negative return value.
+		 */
 		void aa_close(Value &params);
 
+
+		/**
+		 * Checks if the sub response is a result or error.
+		 * \param dom DOM containing json rpc response/error.
+		 * \return False if the DOM contains a json rpc response erorr, true otherwise.
+		 */
 		bool checkSubResult(Document* dom);
+
+
+		/**
+		 * Waits a specific time for a incoming sub-response by waiting for the signal SIGUSR2.
+		 * If the signal was received, the function will just exit.
+		 * \throws Error If the signal SIGUSR2 was not received within the specified time.
+		 * \note Timeout is set through SUBRESPONSE_TIMEOUT define.
+		 */
 		void waitForResponse();
 
-		int getPortByUniqueId(unsigned int);
+
+		/**
+		 * Searches for a device in the deviceList by its uniqueId and return the corresponding port.
+		 * \param uniqueId The unique id of the device (most likely the serial number).
+		 * \param The corresponding port.
+		 */
+		int getPortByUniqueId(unsigned int uniqueId);
 
 };
 

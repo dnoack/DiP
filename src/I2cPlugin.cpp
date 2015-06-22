@@ -2,7 +2,6 @@
 #include "I2c.hpp"
 
 
-
 I2cPlugin::I2cPlugin(PluginInfo* pluginInfo) : PluginInterface(pluginInfo)
 {
 	I2c* tempDriver = new I2c();

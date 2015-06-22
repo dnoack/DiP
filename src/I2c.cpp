@@ -10,6 +10,43 @@
 #include "allocators.h"
 
 
+I2c::I2c() : RPCInterface<I2c*, i2cfptr>(this)
+{
+	i2cfptr fptr;
+
+	subResponse = NULL;
+	error = NULL;
+	subRequest = NULL;
+	subResult = NULL;
+	requestId = NULL;
+	mainResponse = NULL;
+	json = new JsonRPC();
+	mainRequestDom = new Document();
+	subResponseDom = new Document();
+
+	//configure signal SIGUSR2 and timeout for receiving subresponses
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR2);
+	timeout.tv_sec = SUBRESPONSE_TIMEOUT;
+	timeout.tv_nsec = 0;
+
+
+	fptr = &I2c::write;
+	funcMap.insert(pair<const char*, i2cfptr>("i2c.write", fptr));
+	fptr = &I2c::getAardvarkDevices;
+	funcMap.insert(pair<const char*, i2cfptr>("i2c.getAardvarkDevices", fptr));
+	fptr= &I2c::getI2cDevices;
+	funcMap.insert(pair<const char*, i2cfptr>("i2c.getI2cDevices", fptr));
+}
+
+
+I2c::~I2c()
+{
+	delete json;
+	delete mainRequestDom;
+	delete subResponseDom;
+	deleteDeviceList();
+};
 
 
 OutgoingMsg* I2c::process(IncomingMsg* input)
@@ -17,6 +54,7 @@ OutgoingMsg* I2c::process(IncomingMsg* input)
 	Value result;
 	Value* params = NULL;
 	OutgoingMsg* output = NULL;
+	Value* requestMethod = NULL;
 
 	try
 	{
@@ -79,6 +117,7 @@ bool I2c::getI2cDevices(Value &params, Value &result)
 	getAardvarkDevices(params, result);
 	//.. call further methods for getting other devices
 	//generate jsonrpc rsponse like {..... "result" : {Aardvark : [id1, id2, idx] , OtherDevice : [id1, id2, idx]}}
+	mainResponse = json->generateResponse(*requestId, result);
 
 	return true;
 }
@@ -126,7 +165,6 @@ bool I2c::getAardvarkDevices(Value &params, Value &result)
 
 	result.SetObject();
 	result.AddMember("Aardvark", currentParam, requestDom->GetAllocator());
-	mainResponse = json->generateResponse(*requestId, result);
 	return true;
 }
 
@@ -141,7 +179,7 @@ bool I2c::write(Value &params, Value &result)
 
 		//call subMethods
 		aa_open(params);
-		//param powerMask will be alway the same, but is not send by mainRequest.
+		//param powerMask will be always the same, but is not send by mainRequest.
 		params.AddMember("powerMask", AA_TARGET_POWER_BOTH, subRequestAllocator);
 		aa_target_power(params);
 		aa_write(params);

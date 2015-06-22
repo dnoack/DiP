@@ -54,8 +54,9 @@
 #include <RPCInterface.hpp>
 #include <stdio.h>
 
-#include "document.h"
-#include "writer.h"
+
+#include "JsonRPC.hpp"
+
 
 using namespace rapidjson;
 
@@ -244,48 +245,8 @@ typedef struct AardvarkVersion AardvarkVersion;
  * array size.
  */
 #define AA_PORT_NOT_FREE 0x8000
-int aa_find_devices (
-    int   num_devices,
-    u16 * devices
-);
 
 
-/*
- * Get a list of ports to which Aardvark devices are attached.
- *
- * This function is the same as aa_find_devices() except that
- * it returns the unique IDs of each Aardvark device.  The IDs
- * are guaranteed to be non-zero if valid.
- *
- * The IDs are the unsigned integer representation of the 10-digit
- * serial numbers.
- */
-int aa_find_devices_ext (
-    int   num_devices,
-    u16 * devices,
-    int   num_ids,
-    u32 * unique_ids
-);
-
-
-/*
- * Open the Aardvark port.
- *
- * The port number is a zero-indexed integer.
- *
- * The port number is the same as that obtained from the
- * aa_find_devices() function above.
- *
- * Returns an Aardvark handle, which is guaranteed to be
- * greater than zero if it is valid.
- *
- * This function is recommended for use in simple applications
- * where extended information is not required.  For more complex
- * applications, the use of aa_open_ext() is recommended.
- */
-Aardvark aa_open (
-    int port_number
-);
 
 
 /*
@@ -315,27 +276,6 @@ struct AardvarkExt {
 typedef struct AardvarkExt AardvarkExt;
 #endif
 
-Aardvark aa_open_ext (
-    int           port_number,
-    AardvarkExt * aa_ext
-);
-
-
-/* Close the Aardvark port. */
-int aa_close (
-    Aardvark aardvark
-);
-
-
-/*
- * Return the port for this Aardvark handle.
- *
- * The port number is a zero-indexed integer.
- */
-int aa_port (
-    Aardvark aardvark
-);
-
 
 /*
  * Return the device features as a bit-mask of values, or
@@ -345,30 +285,6 @@ int aa_port (
 #define AA_FEATURE_I2C 0x00000002
 #define AA_FEATURE_GPIO 0x00000008
 #define AA_FEATURE_I2C_MONITOR 0x00000010
-int aa_features (
-    Aardvark aardvark
-);
-
-
-/*
- * Return the unique ID for this Aardvark adapter.
- * IDs are guaranteed to be non-zero if valid.
- * The ID is the unsigned integer representation of the
- * 10-digit serial number.
- */
-u32 aa_unique_id (
-    Aardvark aardvark
-);
-
-
-/*
- * Return the status string for the given status code.
- * If the code is not valid or the library function cannot
- * be loaded, return a NULL string.
- */
-const char * aa_status_string (
-    int status
-);
 
 
 /*
@@ -381,22 +297,6 @@ const char * aa_status_string (
  */
 #define AA_LOG_STDOUT 1
 #define AA_LOG_STDERR 2
-int aa_log (
-    Aardvark aardvark,
-    int      level,
-    int      handle
-);
-
-
-/*
- * Return the version matrix for the device attached to the
- * given handle.  If the handle is 0 or invalid, only the
- * software and required api versions are set.
- */
-int aa_version (
-    Aardvark          aardvark,
-    AardvarkVersion * version
-);
 
 
 /*
@@ -416,10 +316,7 @@ typedef enum AardvarkConfig AardvarkConfig;
 
 #define AA_CONFIG_SPI_MASK 0x00000001
 #define AA_CONFIG_I2C_MASK 0x00000002
-int aa_configure (
-    Aardvark       aardvark,
-    AardvarkConfig config
-);
+
 
 
 /*
@@ -429,20 +326,6 @@ int aa_configure (
 #define AA_TARGET_POWER_NONE 0x00
 #define AA_TARGET_POWER_BOTH 0x03
 #define AA_TARGET_POWER_QUERY 0x80
-int aa_target_power (
-    Aardvark aardvark,
-    u08      power_mask
-);
-
-
-/*
- * Sleep for the specified number of milliseconds
- * Accuracy depends on the operating system scheduler
- * Returns the number of milliseconds slept
- */
-u32 aa_sleep_ms (
-    u32 milliseconds
-);
 
 
 
@@ -461,43 +344,10 @@ u32 aa_sleep_ms (
 #define AA_ASYNC_I2C_WRITE 0x00000002
 #define AA_ASYNC_SPI 0x00000004
 #define AA_ASYNC_I2C_MONITOR 0x00000008
-int aa_async_poll (
-    Aardvark aardvark,
-    int      timeout
-);
-
-
 
 /*=========================================================================
 | I2C API
  ========================================================================*/
-/* Free the I2C bus. */
-int aa_i2c_free_bus (
-    Aardvark aardvark
-);
-
-
-/*
- * Set the I2C bit rate in kilohertz.  If a zero is passed as the
- * bitrate, the bitrate is unchanged and the current bitrate is
- * returned.
- */
-int aa_i2c_bitrate (
-    Aardvark aardvark,
-    int      bitrate_khz
-);
-
-
-/*
- * Set the bus lock timeout.  If a zero is passed as the timeout,
- * the timeout is unchanged and the current timeout is returned.
- */
-int aa_i2c_bus_timeout (
-    Aardvark aardvark,
-    u16      timeout_ms
-);
-
-
 enum AardvarkI2cFlags {
     AA_I2C_NO_FLAGS          = 0x00,
     AA_I2C_10_BIT_ADDR       = 0x01,
@@ -509,16 +359,6 @@ enum AardvarkI2cFlags {
 #ifndef __cplusplus
 typedef enum AardvarkI2cFlags AardvarkI2cFlags;
 #endif
-
-
-/* Read a stream of bytes from the I2C slave device. */
-int aa_i2c_read (
-    Aardvark         aardvark,
-    u16              slave_addr,
-    AardvarkI2cFlags flags,
-    u16              num_bytes,
-    u08 *            data_in
-);
 
 
 enum AardvarkI2cStatus {
@@ -535,157 +375,12 @@ enum AardvarkI2cStatus {
 typedef enum AardvarkI2cStatus AardvarkI2cStatus;
 #endif
 
-/*
- * Read a stream of bytes from the I2C slave device.
- * This API function returns the number of bytes read into
- * the num_read variable.  The return value of the function
- * is a status code.
- */
-int aa_i2c_read_ext (
-    Aardvark         aardvark,
-    u16              slave_addr,
-    AardvarkI2cFlags flags,
-    u16              num_bytes,
-    u08 *            data_in,
-    u16 *            num_read
-);
-
-
-/* Write a stream of bytes to the I2C slave device. */
-int aa_i2c_write (
-    Aardvark         aardvark,
-    u16              slave_addr,
-    AardvarkI2cFlags flags,
-    u16              num_bytes,
-    const u08 *      data_out
-);
-
-
-/*
- * Write a stream of bytes to the I2C slave device.
- * This API function returns the number of bytes written into
- * the num_written variable.  The return value of the function
- * is a status code.
- */
-int aa_i2c_write_ext (
-    Aardvark         aardvark,
-    u16              slave_addr,
-    AardvarkI2cFlags flags,
-    u16              num_bytes,
-    const u08 *      data_out,
-    u16 *            num_written
-);
-
-
-/*
- * Do an atomic write+read to an I2C slave device by first
- * writing a stream of bytes to the I2C slave device and then
- * reading a stream of bytes back from the same slave device.
- * This API function returns the number of bytes written into
- * the num_written variable and the number of bytes read into
- * the num_read variable.  The return value of the function is
- * the status given as (read_status << 8) | (write_status).
- */
-int aa_i2c_write_read (
-    Aardvark         aardvark,
-    u16              slave_addr,
-    AardvarkI2cFlags flags,
-    u16              out_num_bytes,
-    const u08 *      out_data,
-    u16 *            num_written,
-    u16              in_num_bytes,
-    u08 *            in_data,
-    u16 *            num_read
-);
-
-
-/* Enable/Disable the Aardvark as an I2C slave device */
-int aa_i2c_slave_enable (
-    Aardvark aardvark,
-    u08      addr,
-    u16      maxTxBytes,
-    u16      maxRxBytes
-);
-
-
-int aa_i2c_slave_disable (
-    Aardvark aardvark
-);
-
-
-/*
- * Set the slave response in the event the Aardvark is put
- * into slave mode and contacted by a Master.
- */
-int aa_i2c_slave_set_response (
-    Aardvark    aardvark,
-    u08         num_bytes,
-    const u08 * data_out
-);
-
-
-/*
- * Return number of bytes written from a previous
- * Aardvark->I2C_master transmission.  Since the transmission is
- * happening asynchronously with respect to the PC host
- * software, there could be responses queued up from many
- * previous write transactions.
- */
-int aa_i2c_slave_write_stats (
-    Aardvark aardvark
-);
-
-
-/* Read the bytes from an I2C slave reception */
-int aa_i2c_slave_read (
-    Aardvark aardvark,
-    u08 *    addr,
-    u16      num_bytes,
-    u08 *    data_in
-);
-
-
-/* Extended functions that return status code */
-int aa_i2c_slave_write_stats_ext (
-    Aardvark aardvark,
-    u16 *    num_written
-);
-
-
-int aa_i2c_slave_read_ext (
-    Aardvark aardvark,
-    u08 *    addr,
-    u16      num_bytes,
-    u08 *    data_in,
-    u16 *    num_read
-);
-
-
-/*
- * Enable the I2C bus monitor
- * This disables all other functions on the Aardvark adapter
- */
-int aa_i2c_monitor_enable (
-    Aardvark aardvark
-);
-
-
-/* Disable the I2C bus monitor */
-int aa_i2c_monitor_disable (
-    Aardvark aardvark
-);
-
 
 /* Read the data collected by the bus monitor */
 #define AA_I2C_MONITOR_DATA 0x00ff
 #define AA_I2C_MONITOR_NACK 0x0100
 #define AA_I2C_MONITOR_CMD_START 0xff00
 #define AA_I2C_MONITOR_CMD_STOP 0xff01
-int aa_i2c_monitor_read (
-    Aardvark aardvark,
-    u16      num_bytes,
-    u16 *    data
-);
 
 
 /*
@@ -695,27 +390,12 @@ int aa_i2c_monitor_read (
 #define AA_I2C_PULLUP_NONE 0x00
 #define AA_I2C_PULLUP_BOTH 0x03
 #define AA_I2C_PULLUP_QUERY 0x80
-int aa_i2c_pullup (
-    Aardvark aardvark,
-    u08      pullup_mask
-);
 
 
 
 /*=========================================================================
 | SPI API
  ========================================================================*/
-/*
- * Set the SPI bit rate in kilohertz.  If a zero is passed as the
- * bitrate, the bitrate is unchanged and the current bitrate is
- * returned.
- */
-int aa_spi_bitrate (
-    Aardvark aardvark,
-    int      bitrate_khz
-);
-
-
 /*
  * These configuration parameters specify how to clock the
  * bits that are sent and received on the Aardvark SPI
@@ -747,6 +427,7 @@ enum AardvarkSpiPolarity {
 typedef enum AardvarkSpiPolarity AardvarkSpiPolarity;
 #endif
 
+
 enum AardvarkSpiPhase {
     AA_SPI_PHASE_SAMPLE_SETUP = 0,
     AA_SPI_PHASE_SETUP_SAMPLE = 1
@@ -754,6 +435,7 @@ enum AardvarkSpiPhase {
 #ifndef __cplusplus
 typedef enum AardvarkSpiPhase AardvarkSpiPhase;
 #endif
+
 
 enum AardvarkSpiBitorder {
     AA_SPI_BITORDER_MSB = 0,
@@ -763,53 +445,6 @@ enum AardvarkSpiBitorder {
 typedef enum AardvarkSpiBitorder AardvarkSpiBitorder;
 #endif
 
-/* Configure the SPI master or slave interface */
-int aa_spi_configure (
-    Aardvark            aardvark,
-    AardvarkSpiPolarity polarity,
-    AardvarkSpiPhase    phase,
-    AardvarkSpiBitorder bitorder
-);
-
-
-/* Write a stream of bytes to the downstream SPI slave device. */
-int aa_spi_write (
-    Aardvark    aardvark,
-    u16         out_num_bytes,
-    const u08 * data_out,
-    u16         in_num_bytes,
-    u08 *       data_in
-);
-
-
-/* Enable/Disable the Aardvark as an SPI slave device */
-int aa_spi_slave_enable (
-    Aardvark aardvark
-);
-
-
-int aa_spi_slave_disable (
-    Aardvark aardvark
-);
-
-
-/*
- * Set the slave response in the event the Aardvark is put
- * into slave mode and contacted by a Master.
- */
-int aa_spi_slave_set_response (
-    Aardvark    aardvark,
-    u08         num_bytes,
-    const u08 * data_out
-);
-
-
-/* Read the bytes from an SPI slave reception */
-int aa_spi_slave_read (
-    Aardvark aardvark,
-    u16      num_bytes,
-    u08 *    data_in
-);
 
 
 /*
@@ -827,10 +462,7 @@ enum AardvarkSpiSSPolarity {
 typedef enum AardvarkSpiSSPolarity AardvarkSpiSSPolarity;
 #endif
 
-int aa_spi_master_ss_polarity (
-    Aardvark              aardvark,
-    AardvarkSpiSSPolarity polarity
-);
+
 
 
 
@@ -898,55 +530,6 @@ int aa_gpio_pullup (
 );
 
 
-/*
- * Read the current digital values on the GPIO input lines.
- *
- * The bits will be ordered as described by AA_GPIO_BITS.  If a
- * line is configured as an output, its corresponding bit
- * position in the mask will be undefined.
- */
-int aa_gpio_get (
-    Aardvark aardvark
-);
-
-
-/*
- * Set the outputs on the GPIO lines.
- *
- * Note: If a line is configured as an input, it will not be
- * affected by this call, but the output value for that line
- * will be cached in the event that the line is later
- * configured as an output.
- */
-int aa_gpio_set (
-    Aardvark aardvark,
-    u08      value
-);
-
-
-/*
- * Block until there is a change on the GPIO input lines.
- * Pins configured as outputs will be ignored.
- *
- * The function will return either when a change has occurred or
- * the timeout expires.  The timeout, specified in millisecods, has
- * a precision of ~16 ms. The maximum allowable timeout is
- * approximately 4 seconds. If the timeout expires, this function
- * will return the current state of the GPIO lines.
- *
- * This function will return immediately with the current value
- * of the GPIO lines for the first invocation after any of the
- * following functions are called: aa_configure,
- * aa_gpio_direction, or aa_gpio_pullup.
- *
- * If the function aa_gpio_get is called before calling
- * aa_gpio_change, aa_gpio_change will only register any changes
- * from the value last returned by aa_gpio_get.
- */
-int aa_gpio_change (
-    Aardvark aardvark,
-    u16      timeout
-);
 
 //predfine symbol RemoteAardvark for our typedef
 class RemoteAardvark;
@@ -954,6 +537,7 @@ class RemoteAardvark;
 //define our type for function pointer to members of RemoteAardvark
 typedef bool (RemoteAardvark::*afptr)(Value&, Value&);
 
+#define NUMBER_OF_FUNCTIONS 23
 
 struct _function
 {
@@ -968,7 +552,7 @@ static _param _num_devices = {"num_devices", kNumberType};
 static _param _port = {"port", kNumberType };
 static _param _aardvark = {"Aardvark", kNumberType};
 static _param _status = {"status", kNumberType};
-static _param _powerMmask = {"powerMask", kNumberType};
+static _param _powerMask = {"powerMask", kNumberType};
 static _param _slave_addr = {"slave_addr", kNumberType};
 static _param _flags = {"AardvarkI2cFlags", kNumberType};
 static _param _num_bytes = {"num_bytes", kNumberType};
@@ -990,14 +574,14 @@ static _param aa_find_devices_params[1] = {_num_devices};
 static _param aa_open_params[1] = {_port};
 static _param aa_port_params[1] = {_aardvark};
 static _param aa_status_string_params[1] = {_status};
-static _param aa_target_power_params[2] = {_aardvark, _powerMmask};
+static _param aa_target_power_params[2] = {_aardvark, _powerMask};
 static _param aa_i2c_write_params[4] = {_aardvark,_slave_addr, _flags, _data_out};
 static _param aa_i2c_read_params[4] = {_aardvark, _slave_addr, _flags, _num_bytes};
 static _param aa_configure_params[2] = {_aardvark, _config};
 static _param aa_i2c_bitrate_params[2] = {_aardvark, _bitrate};
 static _param aa_i2c_pullup_params[2] = {_aardvark, _pullup_mask};
 static _param aa_i2c_slave_enable_params[4] = {_aardvark, _slave_addr, _maxTxBytes, _maxRxBytes};
-static _param aa_i2c_slave_read_params[3] = {_aardvark, _slave_addr, _num_bytes};
+static _param aa_i2c_slave_read_params[2] = {_aardvark, _num_bytes};
 static _param aa_async_poll_params[2] = {_aardvark, _timeout};
 static _param aa_spi_bitrate_params[2] = {_aardvark, _bitrate};
 static _param aa_spi_configure_params[4] = {_aardvark, _polarity, _phase, _bitorder};
@@ -1023,7 +607,7 @@ static _function _aa_configure = {"Aardvark.aa_configure", NULL, 2, aa_configure
 static _function _aa_i2c_bitrate = {"Aardvark.aa_i2c_bitrate", NULL, 2, aa_i2c_bitrate_params};
 static _function _aa_i2c_pullup = {"Aardvark.aa_i2c_pullup", NULL, 2, aa_i2c_pullup_params};
 static _function _aa_i2c_slave_enable = {"Aardvark.aa_i2c_slave_enable", NULL, 4, aa_i2c_slave_enable_params};
-static _function _aa_i2c_slave_read = {"Aardvark.aa_i2c_slave_read", NULL, 3, aa_i2c_slave_read_params};
+static _function _aa_i2c_slave_read = {"Aardvark.aa_i2c_slave_read", NULL, 2, aa_i2c_slave_read_params};
 static _function _aa_async_poll = {"Aardvark.aa_async_poll", NULL, 2, aa_async_poll_params};
 static _function _aa_spi_bitrate = {"Aardvark.aa_spi_bitrate", NULL, 2, aa_spi_bitrate_params};
 static _function _aa_spi_configure = {"Aardvark.aa_spi_configure", NULL, 4, aa_spi_configure_params};
@@ -1031,17 +615,34 @@ static _function _aa_spi_write = {"Aardvark.aa_spi_write", NULL, 3, aa_spi_write
 static _function _aa_spi_master_ss_polarity = {"Aardvark.aa_spi_master_ss_polarity", NULL, 2, aa_spi_master_ss_polarity_params};
 
 
+/**
+ * \class RemoteAardvark
+ * \brief Class for executing API functions of the share library from Totalphase for the Totalphase Aardvark.
+ * RemoteAardvark is the direct connection to the shared  library of Totalphase. It contains parts of the Totalphase
+ * driver API for Linux like constants, definitions and helper functions to access the shared library. The other part
+ * makes it possible to call all needed functions as RPC function with the use of JSON RPC 2.0 requests and get JSON
+ * RPC 2.0 responses as return. For this purpose every function got the same signature like void functionName(Value &params, Value &result).
+ * Where Value is a rapidjson type. All functions will registered with a name and a functionPointer to a internal map.
+ * By inheriting from the clas RPCInterface, it is possible to execute function by calling "executeFunction("functionName", params, result).
+ * After using a device dependent function, the device will be locked to a ConnectionContext till it is released by using the close function
+ * or closing the connection.
+ *
+ */
 class RemoteAardvark : public RPCInterface<RemoteAardvark*, afptr>{
 
 	public:
+
+		/**
+		 * \param port
+		 */
 		RemoteAardvark(int port) : RPCInterface<RemoteAardvark*, afptr>(this)
 		{
 			this->port = port;
-			uniqueId = 0;
 			handle = 0;
 			contextNumber = 0;
+			json = new JsonRPC();
 
-			//get relativ address of function
+			//We can uses this function without a valid handle, so they are registered for all ports
 			_aa_find_devices._funcPtr = &RemoteAardvark::aa_find_devices;
 			//save the relativ address to the map with the corresponding key for rpc
 			funcMap.insert(pair<const char*, afptr>(_aa_find_devices._name, _aa_find_devices._funcPtr));
@@ -1052,6 +653,7 @@ class RemoteAardvark : public RPCInterface<RemoteAardvark*, afptr>{
 			_aa_status_string._funcPtr = &RemoteAardvark::aa_status_string;
 			funcMap.insert(pair<const char*, afptr>(_aa_status_string._name, _aa_status_string._funcPtr));
 
+			//a port < 0 is never valid, so it will never use any handle dependent functions
 			if(port > -1)
 			{
 				_aa_open._funcPtr = &RemoteAardvark::aa_open;
@@ -1118,76 +720,282 @@ class RemoteAardvark : public RPCInterface<RemoteAardvark*, afptr>{
 		};
 
 
+		/** Base-destructor.*/
+		~RemoteAardvark()
+		{
+			delete json;
+		};
 
-		~RemoteAardvark(){};
 
-
-
-		//impelemt the driver functions !
+		/**
+		 * Finds connected Aardvark devices and gets there port numbers.
+		 * \param params Has to have a member called "num_devices" of kNumberType, which contains the expected max. number of devices.
+		 * \return A array of port number of all found Aardvark devices, written into result.
+		 */
 		bool aa_find_devices(Value &params, Value &result);
 
+		/**
+		 * Finds connected Aardvark devices and gets extended information about it.
+		 * \param params Has to have a member called "num_devices" of kNumberType, which contains the expected max. number of devices.
+		 * \return A object containing the number of device, their port numbers and unique ids, written into result.
+		 */
 		bool aa_find_devices_ext(Value &params, Value &result);
 
+
+		/**
+		 * Opens a handle of a Aardvark device.
+		 * \param params Has to have a member called "port" of kNumberType, which contains the port of the device.
+		 * \return A named member "Aardvark" with the handle as value, written into result.
+		 */
 		bool aa_open(Value &params, Value &result);
 
+
+		/**
+		 * Opens a handle of a Aardvark device.
+		 * \param params Has to have a member called "port" of kNumberType, which contains the port of the device.
+		 * \return A object which contains a member "Aardvark" and the handle as value
+		 * 		   + a nested object called "AardvarkExt" which contains
+		 * 		     + a member "features" with a coded number as value
+		 * 		     + a nested object "AardvarkVersionValue" as member with the following members:
+		 * 		       + "software"
+		 * 		       + "firmware"
+		 * 		       + "hardware"
+		 * 		       + "sw_req_by_fw"
+		 * 		       + "fw_req_by_sw"
+		 * 		       + "api_req_by_sw"
+		 * 	, written into result.
+		 */
 		bool aa_open_ext(Value &params, Value &result);
 
+
+		/**
+		 * Closes a open Aardvark device.
+		 * \param params Has to have a member called "Aardvark" of kNumberType, which contains the handle of the device.
+		 * \return A named member "returnCode" with the returnCode of the function aa_close.
+		 */
 		bool aa_close(Value &params, Value &result);
 
+		/**
+		 * Gets the port of a device handle.
+		 * \param params Has to have a member called "Aardvark" of kNumberType, which contains the handle of the device.
+		 * \return A simple unnamed value with the corresponding port number of the device.
+		 */
 		bool aa_port(Value &params, Value &result);
 
+
+		/**
+		 * Gets a coded number which represents the available features of the device.
+		 * \param params Has to have a member called "Aardvark" of kNumberType, which contains the handle of the device.
+		 * \return A simple unnamed value with the corresponding feature code value of the device.
+		 */
 		bool aa_features(Value &params, Value &result);
 
+		/**
+		 * Gets the unique id of the device, which is the 10 digit serial number.
+		 * \param params Has to have a member called "Aardvark" of kNumberType, which contains the handle of the device.
+		 * \return A simple unnamed value with the corresponding serial number of the device.
+		 */
 		bool aa_unique_id(Value &params, Value &result);
 
+
+		/**
+		 * Returns a string representation of a status code (return code) from a aardvark function.
+		 * \param params Has to have member called "status" of kNumberType, which contains status code of an Aardvark device.
+		 * \return A simple unnamed value with the corresponding string of the status code.
+		 */
 		bool aa_status_string(Value &params, Value &result);
 
+
+		/** Returns information about the used/required software and hardware version of the Aardvark.
+		 * \param params Has to have member called "Aardvark" of kNumberType, which contains the handle of an Aardvark device.
+		 * \return A object called "version" which got following members (all of type kNumberType):
+		 * 		- "software"
+		 * 		- "firmware"
+		 * 		- "hardware"
+		 * 		- "sw_req_by_fw"
+		 * 		- "fw_req_by_sw"
+		 * 		- "api_req_by_sw"
+		 */
 		bool aa_version(Value &params, Value &result);
 
+
+		/**
+		 * Activates/deactivate target power pins 4 and 6 of the Aardvark device.
+		 * \param params Has to have member called "Aardvark" of kNumberType, which contains the handle of an Aardvark device.
+		 *  Additionally it has to contain a member "powerMask", which tells the device to activate or deactivate the power pins.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_target_power(Value &params , Value &result);
 
+
+		/**
+		 * Writes a stream of bytes to the I²C slave device.
+		 * \param params Has to have following members:
+		 * 		- "Aardvark" : Containing Aardvark handle
+		 * 		- "slave_addr" : Containing the I²C address of the slave device
+		 * 		- "AardvarkI2cFlags" : Containing special operations.
+		 * 		- "data_out" : Containing the data to write.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_i2c_write(Value &params, Value &result);
 
+		/**
+		 * Reads a stream of bytes from the I²C slave device.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle
+		 * 		- "slave_addr": Containing the I²C address fo the slave device.
+		 * 		- "AardvarkI2cFlags" : Containing special operations.
+		 * 		- "number_bytes" : Number of bytes to read.
+		 * \return A named member "returnCode" with the returnCode of the function + a member "data_in" containing the read bytes.
+		 */
 		bool aa_i2c_read(Value &params, Value &result);
 
+
+		/**
+		 * Activate/deactivate individual subsystems of the Aardvark (I²C, SPI, GPIO).
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"AardvarkConfig": Containing configuration mask.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_configure(Value &params, Value &result);
 
+
+		/**
+		 * Set the I²C bitrate in kilohertz.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"bitrate" : Containing the bitrate.
+		 * 	\return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_i2c_bitrate(Value &params, Value &result);
 
+
+		/**
+		 * Enables/disables the I²C pullup resistors on SCL and SDA.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"pullup_mask" Containing the pullup mask (0x00 = disable, 0x03 = enable).
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_i2c_pullup(Value &params, Value &result);
 
+
+		/**
+		 * Enable the Aardvark adapter as an I²C slave device.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"slave_addr" : Address of this slave.
+		 * 		-"maxTxBytes" : Max number of bytes to transmit per transaction.
+		 * 		-"maxRxBytes" : Max number of byte to receive per transaction.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_i2c_slave_enable(Value &params, Value &result);
 
+
+		/**
+		 * Read bytes from an I²C slave reception.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"num_bytes" : Number of bytes to read from the slave.
+		 * \return The result will contain following members:
+		 * 		-"returnCode" : Containing the return status of the function.
+		 * 		-"data_in" : Containing the read bytes from the slave device.
+		 * 		-"salve_addr" : Containing the slave address of the device.
+		 */
 		bool aa_i2c_slave_read(Value &params, Value &result);
 
+
+		/**
+		 * Check if there is any asynchronous data pending from the Aardvark adapter.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"timeout" : Timeout for polling in milliseconds.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_async_poll(Value &params, Value &result);
 
+
+		/**
+		 * Set the SPI bitrate in kilohertz.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"bitrate" : Bitrate in kilohertz.
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_spi_bitrate(Value &params, Value &result);
 
+
+		/**
+		 * Configure the SPI master of slave interface.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"polarity" : 0 for rising-falling or 1 for falling-rising
+		 * 		-"phase" : 0 for sample-setup or 1 for setup-sample
+		 * 		-"bitorder": 0 for MSB or 1 for LSB
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_spi_configure(Value &params, Value &result);
 
+
+		/**
+		 * Write a stream of bytes to the downstream SPI slave device and read back the full-duplex-response.
+		 * \params param Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"data_out": The data to write.
+		 * 		-"num_bytes" Number of bytes to receive.
+		  * \return The result will contain following members:
+		 * 		-"returnCode" : Containing the return status of the function.
+		 * 		-"data_in" : Containing the read bytes.
+		 */
 		bool aa_spi_write(Value &params, Value &result);
 
+
+		/**
+		 * Change the output polarity of the SS line.
+		 * \param params Has to have following members:
+		 * 		-"Aardvark" : Containing Aardvark handle.
+		 * 		-"polarity" : 0 for SS_ACTIVE_LOW or 1 for SS_ACTIVE_HIGH
+		 * \return A named member "returnCode" with the returnCode of the function.
+		 */
 		bool aa_spi_master_ss_polarity(Value &params, Value &result);
 
 
+		/***Executes aa_close using the saved handle within this RemoteAardvark.*/
+		void close();
+
+
+		/** \return The internal saved port of this RemoteAardvark.*/
 		int getPort(){return this->port;}
+
+
+		/** \return Aardvark handle or 0 if no handle was get.*/
 		int getHandle(){return this->handle;}
+
+
+		/** \return ConnectionContext number identifying the corresponding ConnectionContext of RSD.*/
 		int getContextNumber(){return this->contextNumber;}
+
+
+		/**
+		 * \param contextNumber Unique identifier of the coresponding ConnectionContext.
+		 */
 		void setContextNumber(int contextNumber){this->contextNumber = contextNumber;}
 
 
-
 	private:
-
+		/*! DOM for generating rapidjson values as functions return values (result parameter).*/
 		Document dom;
+		/*! Used for finding members/ analyzing the json values.*/
+		JsonRPC* json;
+		/*! Aardvark port.*/
 		int port;
-		unsigned int uniqueId;
+		/*! If the device is open, this will be a valid Aardvark handle.*/
 		int handle;
+		/*! Unique identification number of the connected ConnectionContext, 0 if no context is connected.*/
 		int contextNumber;
 
 };
-
 
 
 
