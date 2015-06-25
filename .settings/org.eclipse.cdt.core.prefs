@@ -1,4 +1,15 @@
 eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CFLAGS/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CFLAGS/operation=append
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CFLAGS/value=
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CXXFLAGS/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CXXFLAGS/operation=append
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/CXXFLAGS/value=${CFLAGS}
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/LDFLAGS/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/LDFLAGS/operation=append
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/LDFLAGS/value=
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/append=true
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256.1072682219/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256/CFLAGS/delimiter=\:
 environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256/CFLAGS/operation=append
 environment/project/cdt.managedbuild.config.gnu.exe.debug.1785297622.625647256/CFLAGS/value=

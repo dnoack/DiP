@@ -2,4 +2,4 @@
 *.d
 *.o
 /Debug/
-/Release/
+/Release_Cross_32/
